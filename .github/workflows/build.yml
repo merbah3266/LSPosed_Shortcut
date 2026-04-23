@@ -3,14 +3,10 @@ name: Manual Android Build & Sign
 on:
   workflow_dispatch:
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 jobs:
-  build:
+  build_and_sign:
+    name: Build APK & Sign
     runs-on: ubuntu-latest
-    outputs:
-      version_name: ${{ steps.vars.outputs.VERSION_NAME }}
     steps:
     - name: Checkout Code
       uses: actions/checkout@v4
@@ -32,31 +28,13 @@ jobs:
       id: vars
       run: |
         VERSION_NAME=$(grep "versionName" app/build.gradle | head -n 1 | awk -F '["'\'']' '{print $2}')
-        echo "VERSION_NAME=$VERSION_NAME" >> $GITHUB_OUTPUT
-
-    - name: Upload Raw APKs
-      uses: actions/upload-artifact@v4
-      with:
-        name: raw-apks
-        path: |
-          app/build/outputs/apk/release/*.apk
-          app/build/outputs/apk/debug/*.apk
-
-  sign:
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-    - name: Download Raw APKs
-      uses: actions/download-artifact@v4
-      with:
-        name: raw-apks
-        path: apks
+        echo "VERSION_NAME=${VERSION_NAME:-unknown}" >> $GITHUB_ENV
 
     - name: Sign Release APK
       uses: r0adkll/sign-android-release@v1
       id: sign_app
       with:
-        releaseDirectory: apks/release
+        releaseDirectory: app/build/outputs/apk/release
         signingKeyBase64: ${{ secrets.SIGNATURE }}
         alias: ${{ secrets.SIGNATURE_ALIAS }}
         keyStorePassword: ${{ secrets.SIGNATURE_PASSWORD }}
@@ -66,17 +44,22 @@ jobs:
 
     - name: Prepare Final Files
       run: |
-        mkdir -p final_apks
-        VERSION="${{ needs.build.outputs.version_name }}"
-        SIGNED_FILE=$(find apks/release -name "*-signed.apk" | head -n 1)
-        cp "$SIGNED_FILE" final_apks/lsposed_shortcut_v${VERSION}_signed.apk
-        cp apks/debug/app-debug.apk final_apks/temp-unsigned.apk
-        zip -d final_apks/temp-unsigned.apk "META-INF/*"
-        mv final_apks/temp-unsigned.apk final_apks/lsposed_shortcut_v${VERSION}_unsigned.apk
+        rm -rf final_apks && mkdir -p final_apks
+        SIGNED_FILE=$(find app/build/outputs/apk/release -name "*-signed.apk" | head -n 1)
+        if [ -f "$SIGNED_FILE" ]; then
+          cp "$SIGNED_FILE" final_apks/lsposed_shortcut_v${{ env.VERSION_NAME }}_signed.apk
+        fi
+        
+        DEBUG_FILE="app/build/outputs/apk/debug/app-debug.apk"
+        if [ -f "$DEBUG_FILE" ]; then
+          cp "$DEBUG_FILE" final_apks/temp-unsigned.apk
+          zip -d final_apks/temp-unsigned.apk "META-INF/*" || true
+          mv final_apks/temp-unsigned.apk final_apks/lsposed_shortcut_v${{ env.VERSION_NAME }}_unsigned.apk
+        fi
 
     - name: Upload Final Bundle
       uses: actions/upload-artifact@v4
       with:
-        name: lsposed_shortcut_v${{ needs.build.outputs.version_name }}_builds
+        name: lsposed_shortcut_v${{ env.VERSION_NAME }}_builds
         path: final_apks/*.apk
-        
+        if-no-files-found: error
