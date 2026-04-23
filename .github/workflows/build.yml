@@ -1,4 +1,4 @@
-name: Manual Android Build
+name: Manual Android Build & Sign
 
 on:
   workflow_dispatch:
@@ -21,11 +21,34 @@ jobs:
     - name: Grant execute permission
       run: chmod +x gradlew
 
-    - name: Build APK
-      run: ./gradlew assembleDebug
+    - name: Build APKs
+      run: ./gradlew assembleDebug assembleRelease
 
-    - name: Upload APK
+    - name: Sign Release APK
+      uses: r0adkll/sign-android-release@v1
+      id: sign_app
+      with:
+        releaseDirectory: app/build/outputs/apk/release
+        signingKeyBase64: ${{ secrets.SIGNATURE }}
+        alias: ${{ secrets.SIGNATURE_ALIAS }}
+        keyStorePassword: ${{ secrets.SIGNATURE_PASSWORD }}
+        keyPassword: ${{ secrets.SIGNATURE_PASSWORD }}
+      env:
+        BUILD_TOOLS_VERSION: "34.0.0"
+
+    - name: Create Unsigned APK
+      run: |
+        cp app/build/outputs/apk/debug/app-debug.apk app/build/outputs/apk/debug/app-unsigned.apk
+        zip -d app/build/outputs/apk/debug/app-unsigned.apk "META-INF/*"
+
+    - name: Upload Signed APK
       uses: actions/upload-artifact@v4
       with:
-        name: LSPosed-Shortcut-Manual-Build
-        path: app/build/outputs/apk/debug/*.apk
+        name: LSPosed-Shortcut-Signed
+        path: ${{ steps.sign_app.outputs.signedReleaseFile }}
+
+    - name: Upload Unsigned APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: LSPosed-Shortcut-Unsigned
+        path: app/build/outputs/apk/debug/app-unsigned.apk
