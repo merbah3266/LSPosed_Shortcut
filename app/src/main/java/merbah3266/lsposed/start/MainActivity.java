@@ -6,7 +6,6 @@ import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.util.Log;
 
-import java.io.File;
 import java.io.OutputStream;
 
 public class MainActivity extends Activity {
@@ -25,30 +24,12 @@ public class MainActivity extends Activity {
     private static final String VECTOR_SECRET_CODE = "832867";
     private static final String LSPOSED_SECRET_CODE = "5776733";
 
-    private static final String[] SU_PATHS = {
-            "/system/bin/su",
-            "/system/xbin/su",
-            "/sbin/su",
-            "/su/bin/su",
-            "/su/xbin/su",
-            "/vendor/bin/su",
-            "/vendor/xbin/su",
-            "/product/bin/su",
-            "/data/adb/ksu/bin/su",
-            "/data/adb/magisk/su",
-            "/debug_ramdisk/su"
-    };
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        if (!isRootAvailable()) {
-            finish();
-            return;
-        }
-
-        boolean vectorActive = isVectorActive();
+        // كل عمليات الكشف الحساسة تتم عبر root
+        boolean vectorActive = isVectorActiveAsRoot();
 
         updateLauncherIdentity(vectorActive);
         executeBroadcast(vectorActive);
@@ -56,40 +37,55 @@ public class MainActivity extends Activity {
         finish();
     }
 
-    private boolean isRootAvailable() {
-        for (String path : SU_PATHS) {
-            File su = new File(path);
-
-            if (su.isFile() && su.canExecute()) {
-                return true;
-            }
-        }
+    /**
+     * الكشف عن Vector بصلاحيات root.
+     *
+     * الشرطان:
+     * 1. مجلد /data/adb/modules/zygisk_vector موجود.
+     * 2. لا يوجد ملف disable بداخله.
+     */
+    private boolean isVectorActiveAsRoot() {
+        Process process = null;
 
         try {
-            Process process = Runtime.getRuntime().exec(
-                    new String[]{"su", "-c", "id"}
-            );
+            process = Runtime.getRuntime().exec("su");
+
+            OutputStream os = process.getOutputStream();
+
+            String command =
+                    "if [ -d '" + VECTOR_MODULE + "' ] && " +
+                    "[ ! -e '" + VECTOR_MODULE + "/disable' ]; then " +
+                    "exit 0; " +
+                    "else " +
+                    "exit 1; " +
+                    "fi\n";
+
+            os.write(command.getBytes("UTF-8"));
+            os.flush();
+            os.close();
 
             int exitCode = process.waitFor();
 
-            if (exitCode == 0) {
-                return true;
-            }
+            Log.d(TAG,
+                    "Vector root detection exit code: " + exitCode);
+
+            return exitCode == 0;
+
         } catch (Exception e) {
-            Log.d(TAG, "su execution check failed", e);
+            Log.e(TAG,
+                    "Vector root detection failed", e);
+            return false;
+
+        } finally {
+            if (process != null) {
+                process.destroy();
+            }
         }
-
-        return false;
     }
 
-    private boolean isVectorActive() {
-        File module = new File(VECTOR_MODULE);
-
-        return module.isDirectory()
-                && !new File(module, "disable").exists()
-                && !new File(module, "remove").exists();
-    }
-
+    /**
+     * تبديل أيقونة/Launcher Alias حسب حالة Vector.
+     */
     private void updateLauncherIdentity(boolean vectorActive) {
         PackageManager pm = getPackageManager();
 
@@ -100,6 +96,7 @@ public class MainActivity extends Activity {
                 new ComponentName(this, DEFAULT_ALIAS);
 
         if (vectorActive) {
+
             pm.setComponentEnabledSetting(
                     vectorAlias,
                     PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
@@ -111,7 +108,11 @@ public class MainActivity extends Activity {
                     PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
                     PackageManager.DONT_KILL_APP
             );
+
+            Log.d(TAG, "Vector detected: using VectorAlias");
+
         } else {
+
             pm.setComponentEnabledSetting(
                     vectorAlias,
                     PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
@@ -123,10 +124,16 @@ public class MainActivity extends Activity {
                     PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
                     PackageManager.DONT_KILL_APP
             );
+
+            Log.d(TAG, "Vector not detected: using DefaultAlias");
         }
     }
 
+    /**
+     * إرسال Secret Code المناسب عبر root.
+     */
     private void executeBroadcast(boolean vectorActive) {
+
         String secretCode = vectorActive
                 ? VECTOR_SECRET_CODE
                 : LSPOSED_SECRET_CODE;
@@ -163,12 +170,22 @@ public class MainActivity extends Activity {
             int exitCode = suProcess.waitFor();
 
             if (exitCode != 0) {
-                Log.e(TAG, "su exited with code: " + exitCode);
+                Log.e(TAG,
+                        "am broadcast exited with code: " +
+                        exitCode);
+            } else {
+                Log.d(TAG,
+                        "Secret code broadcast sent: " +
+                        secretCode);
             }
 
         } catch (Exception e) {
-            Log.e(TAG, "Broadcast error", e);
+
+            Log.e(TAG,
+                    "Broadcast error", e);
+
         } finally {
+
             if (suProcess != null) {
                 suProcess.destroy();
             }
