@@ -1,23 +1,28 @@
-# LSPosed_Shortcut
+LSPosed Shortcut
 
-A shortcut app to open LSPosed Manager.
+A simple Android shortcut for quickly accessing LSPosed Manager or Vector.
 
-## About
+Features
 
-LSPosed Manager removed the shortcut feature, so this app provides an alternative way to quickly access it from your home screen.
+- Opens LSPosed Manager with one tap.
+- Automatically detects whether Vector is active.
+- Switches between the LSPosed and Vector launcher icons automatically.
+- Requires root access.
 
-## Compatibility
+Requirements
 
-Tested on **LSPosed 2.0.1**. While it should work on other versions, compatibility is not guaranteed.
+- Rooted Android device.
+- LSPosed Manager or Vector installed.
 
-## Installation
+Installation
 
-Build and install the APK on your Android device.
+You can install the app in either of the following ways:
 
-## Usage
+- Download the latest APK from "Releases" (../../releases).
+- Build the project yourself and install the APK on your Android device.
 
-Tap the app icon to create a shortcut on your home screen, then use it to open LSPosed Manager.
+Then simply tap the app icon to open the appropriate manager.
 
-## License
+License
 
-[MIT LICENSE](LICENSE)
+"MIT License" (LICENSE)
