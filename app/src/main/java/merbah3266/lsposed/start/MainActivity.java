@@ -4,12 +4,14 @@ import android.app.Activity;
 import android.content.ComponentName;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
-import android.widget.Toast;
+import android.util.Log;
 
 import java.io.File;
 import java.io.OutputStream;
 
 public class MainActivity extends Activity {
+
+    private static final String TAG = "RootBroadcast";
 
     private static final String VECTOR_MODULE =
             "/data/adb/modules/zygisk_vector";
@@ -28,12 +30,6 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
 
         if (!isRooted()) {
-            Toast.makeText(
-                    this,
-                    "root is required",
-                    Toast.LENGTH_LONG
-            ).show();
-
             finish();
             return;
         }
@@ -129,9 +125,10 @@ public class MainActivity extends Activity {
                 " -d android_secret_code://" +
                 secretCode;
 
+        Process suProcess = null;
+
         try {
-            Process suProcess =
-                    Runtime.getRuntime().exec("su");
+            suProcess = Runtime.getRuntime().exec("su");
 
             OutputStream outputStream =
                     suProcess.getOutputStream();
@@ -144,19 +141,13 @@ public class MainActivity extends Activity {
             outputStream.close();
 
             suProcess.waitFor();
-            suProcess.destroy();
 
         } catch (Exception e) {
-            android.util.Log.e(
-                    "RootBroadcast",
-                    "error: " + e.getMessage()
-            );
-
-            Toast.makeText(
-                    this,
-                    "error: " + e.getMessage(),
-                    Toast.LENGTH_LONG
-            ).show();
+            Log.e(TAG, "Broadcast error", e);
+        } finally {
+            if (suProcess != null) {
+                suProcess.destroy();
+            }
         }
     }
 }
