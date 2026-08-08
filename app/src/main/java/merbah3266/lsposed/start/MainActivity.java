@@ -93,7 +93,7 @@ public class MainActivity extends Activity {
             
             runOnUiThread(() -> {
                 if (!finalHasRoot) {
-                    Toast.makeText(this, "صلاحيات الروت غير متوفرة", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, "Root access unavailable", Toast.LENGTH_SHORT).show();
                 } else {
                     updateLauncherIdentity(finalVectorActive);
                 }
