@@ -5,7 +5,8 @@
     <application
         android:allowBackup="true"
         android:label="LSPosed"
-        android:icon="@drawable/ic_launcher">
+        android:icon="@drawable/ic_launcher"
+        android:theme="@style/Theme.Invisible"> <!-- تمت إضافة الثيم هنا -->
 
         <activity
             android:name=".MainActivity"
