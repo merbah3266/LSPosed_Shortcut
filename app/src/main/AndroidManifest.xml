@@ -10,7 +10,7 @@
         <activity
             android:name=".MainActivity"
             android:excludeFromRecents="true"
-            android:exported="false" />
+            android:exported="true" />
 
         <activity-alias
             android:name=".DefaultAlias"
