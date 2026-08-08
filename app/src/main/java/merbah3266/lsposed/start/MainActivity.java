@@ -25,11 +25,25 @@ public class MainActivity extends Activity {
     private static final String VECTOR_SECRET_CODE = "832867";
     private static final String LSPOSED_SECRET_CODE = "5776733";
 
+    private static final String[] SU_PATHS = {
+            "/system/bin/su",
+            "/system/xbin/su",
+            "/sbin/su",
+            "/su/bin/su",
+            "/su/xbin/su",
+            "/vendor/bin/su",
+            "/vendor/xbin/su",
+            "/product/bin/su",
+            "/data/adb/ksu/bin/su",
+            "/data/adb/magisk/su",
+            "/debug_ramdisk/su"
+    };
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        if (!isRooted()) {
+        if (!isRootAvailable()) {
             finish();
             return;
         }
@@ -42,19 +56,27 @@ public class MainActivity extends Activity {
         finish();
     }
 
-    private boolean isRooted() {
-        String[] paths = {
-                "/system/xbin/su",
-                "/system/bin/su",
-                "/debug_ramdisk/su"
-        };
+    private boolean isRootAvailable() {
+        for (String path : SU_PATHS) {
+            File su = new File(path);
 
-        for (String path : paths) {
-            File file = new File(path);
-
-            if (file.exists() && file.canExecute()) {
+            if (su.isFile() && su.canExecute()) {
                 return true;
             }
+        }
+
+        try {
+            Process process = Runtime.getRuntime().exec(
+                    new String[]{"su", "-c", "id"}
+            );
+
+            int exitCode = process.waitFor();
+
+            if (exitCode == 0) {
+                return true;
+            }
+        } catch (Exception e) {
+            Log.d(TAG, "su execution check failed", e);
         }
 
         return false;
@@ -63,11 +85,9 @@ public class MainActivity extends Activity {
     private boolean isVectorActive() {
         File module = new File(VECTOR_MODULE);
 
-        if (!module.isDirectory()) {
-            return false;
-        }
-
-        return !new File(module, "disable").exists();
+        return module.isDirectory()
+                && !new File(module, "disable").exists()
+                && !new File(module, "remove").exists();
     }
 
     private void updateLauncherIdentity(boolean vectorActive) {
@@ -134,13 +154,17 @@ public class MainActivity extends Activity {
                     suProcess.getOutputStream();
 
             outputStream.write(
-                    (command + "\n").getBytes()
+                    (command + "\n").getBytes("UTF-8")
             );
 
             outputStream.flush();
             outputStream.close();
 
-            suProcess.waitFor();
+            int exitCode = suProcess.waitFor();
+
+            if (exitCode != 0) {
+                Log.e(TAG, "su exited with code: " + exitCode);
+            }
 
         } catch (Exception e) {
             Log.e(TAG, "Broadcast error", e);
