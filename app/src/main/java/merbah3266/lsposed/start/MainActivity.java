@@ -4,13 +4,16 @@ import android.app.Activity;
 import android.content.ComponentName;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
-import android.util.Log;
+import android.widget.Toast;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 public class MainActivity extends Activity {
-
-    private static final String TAG = "RootBroadcast";
 
     private static final String VECTOR_MODULE =
             "/data/adb/modules/zygisk_vector";
@@ -24,171 +27,127 @@ public class MainActivity extends Activity {
     private static final String VECTOR_SECRET_CODE = "832867";
     private static final String LSPOSED_SECRET_CODE = "5776733";
 
+    private final ExecutorService executor = Executors.newSingleThreadExecutor();
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // كل عمليات الكشف الحساسة تتم عبر root
-        boolean vectorActive = isVectorActiveAsRoot();
+        executor.execute(() -> {
+            boolean hasRoot = false;
+            boolean vectorActive = false;
 
-        updateLauncherIdentity(vectorActive);
-        executeBroadcast(vectorActive);
+            Process process = null;
+            try {
+                ProcessBuilder pb = new ProcessBuilder("su");
+                pb.redirectErrorStream(true);
+                process = pb.start();
 
-        finish();
-    }
+                OutputStream os = process.getOutputStream();
 
-    /**
-     * الكشف عن Vector بصلاحيات root.
-     *
-     * الشرطان:
-     * 1. مجلد /data/adb/modules/zygisk_vector موجود.
-     * 2. لا يوجد ملف disable بداخله.
-     */
-    private boolean isVectorActiveAsRoot() {
-        Process process = null;
+                String action = android.os.Build.VERSION.SDK_INT >= 29
+                        ? "android.telephony.action.SECRET_CODE"
+                        : "android.provider.Telephony.SECRET_CODE";
 
-        try {
-            process = Runtime.getRuntime().exec("su");
+                String command =
+                        "if [ -d '" + VECTOR_MODULE + "' ] && " +
+                        "[ ! -e '" + VECTOR_MODULE + "/disable' ]; then " +
+                        "  am broadcast --user 0 -a " + action + " -d android_secret_code://" + VECTOR_SECRET_CODE + " > /dev/null 2>&1; " +
+                        "  echo 'VECTOR_ACTIVE'; " +
+                        "else " +
+                        "  am broadcast --user 0 -a " + action + " -d android_secret_code://" + LSPOSED_SECRET_CODE + " > /dev/null 2>&1; " +
+                        "  echo 'VECTOR_INACTIVE'; " +
+                        "fi\nexit\n";
 
-            OutputStream os = process.getOutputStream();
+                os.write(command.getBytes("UTF-8"));
+                os.flush();
+                os.close();
 
-            String command =
-                    "if [ -d '" + VECTOR_MODULE + "' ] && " +
-                    "[ ! -e '" + VECTOR_MODULE + "/disable' ]; then " +
-                    "exit 0; " +
-                    "else " +
-                    "exit 1; " +
-                    "fi\n";
+                BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    if ("VECTOR_ACTIVE".equals(line.trim())) {
+                        vectorActive = true;
+                        hasRoot = true;
+                    } else if ("VECTOR_INACTIVE".equals(line.trim())) {
+                        vectorActive = false;
+                        hasRoot = true;
+                    }
+                }
 
-            os.write(command.getBytes("UTF-8"));
-            os.flush();
-            os.close();
+                if (!process.waitFor(10, TimeUnit.SECONDS)) {
+                    process.destroyForcibly();
+                    hasRoot = false;
+                }
 
-            int exitCode = process.waitFor();
-
-            Log.d(TAG,
-                    "Vector root detection exit code: " + exitCode);
-
-            return exitCode == 0;
-
-        } catch (Exception e) {
-            Log.e(TAG,
-                    "Vector root detection failed", e);
-            return false;
-
-        } finally {
-            if (process != null) {
-                process.destroy();
+            } catch (Exception e) {
+                hasRoot = false;
+            } finally {
+                if (process != null) {
+                    process.destroy();
+                }
             }
-        }
+
+            boolean finalHasRoot = hasRoot;
+            boolean finalVectorActive = vectorActive;
+            
+            runOnUiThread(() -> {
+                if (!finalHasRoot) {
+                    Toast.makeText(this, "صلاحيات الروت غير متوفرة", Toast.LENGTH_SHORT).show();
+                } else {
+                    updateLauncherIdentity(finalVectorActive);
+                }
+                
+                finish();
+            });
+        });
     }
 
-    /**
-     * تبديل أيقونة/Launcher Alias حسب حالة Vector.
-     */
     private void updateLauncherIdentity(boolean vectorActive) {
         PackageManager pm = getPackageManager();
 
-        ComponentName vectorAlias =
-                new ComponentName(this, VECTOR_ALIAS);
+        ComponentName vectorAlias = new ComponentName(this, VECTOR_ALIAS);
+        ComponentName defaultAlias = new ComponentName(this, DEFAULT_ALIAS);
 
-        ComponentName defaultAlias =
-                new ComponentName(this, DEFAULT_ALIAS);
+        int currentVectorState = pm.getComponentEnabledSetting(vectorAlias);
+        int currentDefaultState = pm.getComponentEnabledSetting(defaultAlias);
 
         if (vectorActive) {
-
-            pm.setComponentEnabledSetting(
-                    vectorAlias,
-                    PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
-                    PackageManager.DONT_KILL_APP
-            );
-
-            pm.setComponentEnabledSetting(
-                    defaultAlias,
-                    PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
-                    PackageManager.DONT_KILL_APP
-            );
-
-            Log.d(TAG, "Vector detected: using VectorAlias");
-
+            if (currentVectorState != PackageManager.COMPONENT_ENABLED_STATE_ENABLED) {
+                pm.setComponentEnabledSetting(
+                        vectorAlias,
+                        PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
+                        PackageManager.DONT_KILL_APP
+                );
+            }
+            if (currentDefaultState != PackageManager.COMPONENT_ENABLED_STATE_DISABLED) {
+                pm.setComponentEnabledSetting(
+                        defaultAlias,
+                        PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+                        PackageManager.DONT_KILL_APP
+                );
+            }
         } else {
-
-            pm.setComponentEnabledSetting(
-                    vectorAlias,
-                    PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
-                    PackageManager.DONT_KILL_APP
-            );
-
-            pm.setComponentEnabledSetting(
-                    defaultAlias,
-                    PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
-                    PackageManager.DONT_KILL_APP
-            );
-
-            Log.d(TAG, "Vector not detected: using DefaultAlias");
+            if (currentVectorState != PackageManager.COMPONENT_ENABLED_STATE_DISABLED) {
+                pm.setComponentEnabledSetting(
+                        vectorAlias,
+                        PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+                        PackageManager.DONT_KILL_APP
+                );
+            }
+            if (currentDefaultState != PackageManager.COMPONENT_ENABLED_STATE_ENABLED) {
+                pm.setComponentEnabledSetting(
+                        defaultAlias,
+                        PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
+                        PackageManager.DONT_KILL_APP
+                );
+            }
         }
     }
 
-    /**
-     * إرسال Secret Code المناسب عبر root.
-     */
-    private void executeBroadcast(boolean vectorActive) {
-
-        String secretCode = vectorActive
-                ? VECTOR_SECRET_CODE
-                : LSPOSED_SECRET_CODE;
-
-        String action;
-
-        if (android.os.Build.VERSION.SDK_INT >= 29) {
-            action = "android.telephony.action.SECRET_CODE";
-        } else {
-            action = "android.provider.Telephony.SECRET_CODE";
-        }
-
-        String command =
-                "am broadcast -a " +
-                action +
-                " -d android_secret_code://" +
-                secretCode;
-
-        Process suProcess = null;
-
-        try {
-            suProcess = Runtime.getRuntime().exec("su");
-
-            OutputStream outputStream =
-                    suProcess.getOutputStream();
-
-            outputStream.write(
-                    (command + "\n").getBytes("UTF-8")
-            );
-
-            outputStream.flush();
-            outputStream.close();
-
-            int exitCode = suProcess.waitFor();
-
-            if (exitCode != 0) {
-                Log.e(TAG,
-                        "am broadcast exited with code: " +
-                        exitCode);
-            } else {
-                Log.d(TAG,
-                        "Secret code broadcast sent: " +
-                        secretCode);
-            }
-
-        } catch (Exception e) {
-
-            Log.e(TAG,
-                    "Broadcast error", e);
-
-        } finally {
-
-            if (suProcess != null) {
-                suProcess.destroy();
-            }
-        }
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        executor.shutdown();
     }
 }
