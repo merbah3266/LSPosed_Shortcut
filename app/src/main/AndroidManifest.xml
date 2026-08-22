@@ -48,7 +48,7 @@
         <service
             android:name=".StartTileService"
             android:label="LSPosed"
-            android:icon="@drawable/ic_launcher_foreground"
+            android:icon="@drawable/ic_qs_lsposed"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
             android:exported="true">
 
