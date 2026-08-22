@@ -1,7 +1,5 @@
 package merbah3266.lsposed.start;
 
-import android.content.ComponentName;
-import android.content.Intent;
 import android.graphics.drawable.Icon;
 import android.os.Build;
 import android.service.quicksettings.Tile;
@@ -12,47 +10,64 @@ public class StartTileService extends TileService {
     @Override
     public void onStartListening() {
         super.onStartListening();
-        updateTile();
+
+        boolean vectorActive =
+                MainActivity.getSavedVectorState(this);
+
+        updateTile(vectorActive);
     }
 
     @Override
     public void onClick() {
         super.onClick();
 
-        Intent intent = new Intent(this, MainActivity.class);
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        MainActivity.refreshQuickSettingsTile(this);
+
+        android.content.Intent intent =
+                new android.content.Intent(this, MainActivity.class);
+
+        intent.addFlags(
+                android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+        );
 
         startActivityAndCollapse(intent);
 
         Tile tile = getQsTile();
+
         if (tile != null) {
             tile.setState(Tile.STATE_INACTIVE);
             tile.updateTile();
         }
     }
 
-    private void updateTile() {
+    private void updateTile(boolean vectorActive) {
         Tile tile = getQsTile();
+
         if (tile == null) {
             return;
         }
 
-        if (isVectorActive()) {
+        if (vectorActive) {
             tile.setLabel("Vector");
-            tile.setIcon(Icon.createWithResource(
-                    this,
-                    R.drawable.ic_victory_monochrome
-            ));
+            tile.setIcon(
+                    Icon.createWithResource(
+                            this,
+                            R.drawable.ic_victory_monochrome
+                    )
+            );
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 tile.setSubtitle("Launch \"Vector\"");
             }
+
         } else {
             tile.setLabel("LSPosed");
-            tile.setIcon(Icon.createWithResource(
-                    this,
-                    R.drawable.ic_launcher_foreground
-            ));
+            tile.setIcon(
+                    Icon.createWithResource(
+                            this,
+                            R.drawable.ic_launcher_foreground
+                    )
+            );
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 tile.setSubtitle("Launch \"LSPosed\"");
@@ -61,23 +76,6 @@ public class StartTileService extends TileService {
 
         tile.setState(Tile.STATE_INACTIVE);
         tile.updateTile();
-    }
-
-    private boolean isVectorActive() {
-        try {
-            Process process = Runtime.getRuntime().exec(new String[]{
-                    "su",
-                    "-c",
-                    "[ -d /data/adb/modules/zygisk_vector ] && " +
-                    "[ ! -e /data/adb/modules/zygisk_vector/disable ]"
-            });
-
-            int exitCode = process.waitFor();
-            return exitCode == 0;
-
-        } catch (Exception e) {
-            return false;
-        }
     }
 
     @Override
