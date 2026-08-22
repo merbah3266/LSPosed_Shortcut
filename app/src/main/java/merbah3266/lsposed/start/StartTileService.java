@@ -82,7 +82,7 @@ public class StartTileService extends TileService {
             tile.setIcon(
                     Icon.createWithResource(
                             this,
-                            R.drawable.ic_launcher_foreground
+                            R.drawable.ic_qs_lsposed
                     )
             );
 
