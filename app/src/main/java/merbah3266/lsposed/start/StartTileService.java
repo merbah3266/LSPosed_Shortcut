@@ -1,5 +1,7 @@
 package merbah3266.lsposed.start;
 
+import android.app.PendingIntent;
+import android.content.Intent;
 import android.graphics.drawable.Icon;
 import android.os.Build;
 import android.service.quicksettings.Tile;
@@ -21,16 +23,18 @@ public class StartTileService extends TileService {
     public void onClick() {
         super.onClick();
 
-        MainActivity.refreshQuickSettingsTile(this);
+        Intent intent = new Intent(this, MainActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 
-        android.content.Intent intent =
-                new android.content.Intent(this, MainActivity.class);
-
-        intent.addFlags(
-                android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+        PendingIntent pendingIntent = PendingIntent.getActivity(
+                this,
+                0,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT |
+                PendingIntent.FLAG_IMMUTABLE
         );
 
-        startActivityAndCollapse(intent);
+        startActivityAndCollapse(pendingIntent);
 
         Tile tile = getQsTile();
 
@@ -59,7 +63,6 @@ public class StartTileService extends TileService {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 tile.setSubtitle("Launch \"Vector\"");
             }
-
         } else {
             tile.setLabel("LSPosed");
             tile.setIcon(
