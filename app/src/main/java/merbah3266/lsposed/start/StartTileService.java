@@ -75,7 +75,7 @@ public class StartTileService extends TileService {
             );
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                tile.setSubtitle("Launch \"Vector\"");
+                tile.setSubtitle("Launch Vector");
             }
         } else {
             tile.setLabel("LSPosed");
@@ -87,7 +87,7 @@ public class StartTileService extends TileService {
             );
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                tile.setSubtitle("Launch \"LSPosed\"");
+                tile.setSubtitle("Launch LSPosed");
             }
         }
 
