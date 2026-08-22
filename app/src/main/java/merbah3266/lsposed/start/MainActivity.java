@@ -2,10 +2,10 @@ package merbah3266.lsposed.start;
 
 import android.app.Activity;
 import android.content.ComponentName;
+import android.content.Context;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
-import android.service.quicksettings.Tile;
 import android.service.quicksettings.TileService;
 import android.widget.Toast;
 
@@ -30,7 +30,59 @@ public class MainActivity extends Activity {
     private static final String VECTOR_SECRET_CODE = "832867";
     private static final String LSPOSED_SECRET_CODE = "5776733";
 
+    private static final String PREFS_NAME = "qstile";
+    private static final String KEY_VECTOR_ACTIVE = "vector_active";
+
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
+
+    public static boolean isVectorActive() {
+        Process process = null;
+
+        try {
+            process = new ProcessBuilder(
+                    "su",
+                    "-c",
+                    "[ -d '" + VECTOR_MODULE + "' ] && " +
+                    "[ ! -e '" + VECTOR_MODULE + "/disable' ]"
+            ).start();
+
+            return process.waitFor(10, TimeUnit.SECONDS)
+                    && process.exitValue() == 0;
+
+        } catch (Exception e) {
+            return false;
+        } finally {
+            if (process != null) {
+                process.destroy();
+            }
+        }
+    }
+
+    public static void saveVectorState(Context context, boolean vectorActive) {
+        context.getSharedPreferences(
+                PREFS_NAME,
+                Context.MODE_PRIVATE
+        ).edit()
+                .putBoolean(KEY_VECTOR_ACTIVE, vectorActive)
+                .apply();
+    }
+
+    public static boolean getSavedVectorState(Context context) {
+        return context.getSharedPreferences(
+                PREFS_NAME,
+                Context.MODE_PRIVATE
+        ).getBoolean(KEY_VECTOR_ACTIVE, false);
+    }
+
+    public static void refreshQuickSettingsTile(Context context) {
+        TileService.requestListeningState(
+                context,
+                new ComponentName(
+                        context,
+                        StartTileService.class
+                )
+        );
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -53,19 +105,18 @@ public class MainActivity extends Activity {
                         ? "android.telephony.action.SECRET_CODE"
                         : "android.provider.Telephony.SECRET_CODE";
 
+                vectorActive = isVectorActive();
+
+                String secretCode = vectorActive
+                        ? VECTOR_SECRET_CODE
+                        : LSPOSED_SECRET_CODE;
+
                 String command =
-                        "if [ -d '" + VECTOR_MODULE + "' ] && " +
-                        "[ ! -e '" + VECTOR_MODULE + "/disable' ]; then " +
-                        "  am broadcast --user 0 -a " + action +
-                        " -d android_secret_code://" + VECTOR_SECRET_CODE +
-                        " > /dev/null 2>&1; " +
-                        "  echo 'VECTOR_ACTIVE'; " +
-                        "else " +
-                        "  am broadcast --user 0 -a " + action +
-                        " -d android_secret_code://" + LSPOSED_SECRET_CODE +
-                        " > /dev/null 2>&1; " +
-                        "  echo 'VECTOR_INACTIVE'; " +
-                        "fi\nexit\n";
+                        "am broadcast --user 0 -a " + action +
+                        " -d android_secret_code://" + secretCode +
+                        " > /dev/null 2>&1\n" +
+                        "echo ROOT_OK\n" +
+                        "exit\n";
 
                 os.write(command.getBytes("UTF-8"));
                 os.flush();
@@ -78,11 +129,7 @@ public class MainActivity extends Activity {
                 String line;
 
                 while ((line = reader.readLine()) != null) {
-                    if ("VECTOR_ACTIVE".equals(line.trim())) {
-                        vectorActive = true;
-                        hasRoot = true;
-                    } else if ("VECTOR_INACTIVE".equals(line.trim())) {
-                        vectorActive = false;
+                    if ("ROOT_OK".equals(line.trim())) {
                         hasRoot = true;
                     }
                 }
@@ -111,8 +158,9 @@ public class MainActivity extends Activity {
                             Toast.LENGTH_SHORT
                     ).show();
                 } else {
+                    saveVectorState(this, finalVectorActive);
                     updateLauncherIdentity(finalVectorActive);
-                    updateQuickSettingsTile(finalVectorActive);
+                    refreshQuickSettingsTile(this);
                 }
 
                 finish();
@@ -177,16 +225,6 @@ public class MainActivity extends Activity {
                 );
             }
         }
-    }
-
-    private void updateQuickSettingsTile(boolean vectorActive) {
-        TileService.requestListeningState(
-                this,
-                new ComponentName(
-                        this,
-                        StartTileService.class
-                )
-        );
     }
 
     @Override
