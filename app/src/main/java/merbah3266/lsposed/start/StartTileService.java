@@ -12,7 +12,6 @@ public class StartTileService extends TileService {
     @Override
     public void onStartListening() {
         super.onStartListening();
-
         updateTile(MainActivity.getSavedVectorState(this));
     }
 
@@ -30,18 +29,7 @@ public class StartTileService extends TileService {
                 PendingIntent.FLAG_IMMUTABLE
         );
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            startActivityAndCollapse(pendingIntent);
-        } else {
-            startActivityAndCollapse(intent);
-        }
-
-        Tile tile = getQsTile();
-
-        if (tile != null) {
-            tile.setState(Tile.STATE_INACTIVE);
-            tile.updateTile();
-        }
+        startActivityAndCollapse(pendingIntent);
     }
 
     private void updateTile(boolean vectorActive) {
