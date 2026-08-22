@@ -3,7 +3,10 @@ package merbah3266.lsposed.start;
 import android.app.Activity;
 import android.content.ComponentName;
 import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
+import android.service.quicksettings.Tile;
+import android.service.quicksettings.TileService;
 import android.widget.Toast;
 
 import java.io.BufferedReader;
@@ -38,6 +41,7 @@ public class MainActivity extends Activity {
             boolean vectorActive = false;
 
             Process process = null;
+
             try {
                 ProcessBuilder pb = new ProcessBuilder("su");
                 pb.redirectErrorStream(true);
@@ -45,17 +49,21 @@ public class MainActivity extends Activity {
 
                 OutputStream os = process.getOutputStream();
 
-                String action = android.os.Build.VERSION.SDK_INT >= 29
+                String action = Build.VERSION.SDK_INT >= 29
                         ? "android.telephony.action.SECRET_CODE"
                         : "android.provider.Telephony.SECRET_CODE";
 
                 String command =
                         "if [ -d '" + VECTOR_MODULE + "' ] && " +
                         "[ ! -e '" + VECTOR_MODULE + "/disable' ]; then " +
-                        "  am broadcast --user 0 -a " + action + " -d android_secret_code://" + VECTOR_SECRET_CODE + " > /dev/null 2>&1; " +
+                        "  am broadcast --user 0 -a " + action +
+                        " -d android_secret_code://" + VECTOR_SECRET_CODE +
+                        " > /dev/null 2>&1; " +
                         "  echo 'VECTOR_ACTIVE'; " +
                         "else " +
-                        "  am broadcast --user 0 -a " + action + " -d android_secret_code://" + LSPOSED_SECRET_CODE + " > /dev/null 2>&1; " +
+                        "  am broadcast --user 0 -a " + action +
+                        " -d android_secret_code://" + LSPOSED_SECRET_CODE +
+                        " > /dev/null 2>&1; " +
                         "  echo 'VECTOR_INACTIVE'; " +
                         "fi\nexit\n";
 
@@ -63,8 +71,12 @@ public class MainActivity extends Activity {
                 os.flush();
                 os.close();
 
-                BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+                BufferedReader reader = new BufferedReader(
+                        new InputStreamReader(process.getInputStream())
+                );
+
                 String line;
+
                 while ((line = reader.readLine()) != null) {
                     if ("VECTOR_ACTIVE".equals(line.trim())) {
                         vectorActive = true;
@@ -90,14 +102,19 @@ public class MainActivity extends Activity {
 
             boolean finalHasRoot = hasRoot;
             boolean finalVectorActive = vectorActive;
-            
+
             runOnUiThread(() -> {
                 if (!finalHasRoot) {
-                    Toast.makeText(this, "Root access unavailable", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(
+                            this,
+                            "Root access unavailable",
+                            Toast.LENGTH_SHORT
+                    ).show();
                 } else {
                     updateLauncherIdentity(finalVectorActive);
+                    updateQuickSettingsTile(finalVectorActive);
                 }
-                
+
                 finish();
             });
         });
@@ -106,36 +123,53 @@ public class MainActivity extends Activity {
     private void updateLauncherIdentity(boolean vectorActive) {
         PackageManager pm = getPackageManager();
 
-        ComponentName vectorAlias = new ComponentName(this, VECTOR_ALIAS);
-        ComponentName defaultAlias = new ComponentName(this, DEFAULT_ALIAS);
+        ComponentName vectorAlias =
+                new ComponentName(this, VECTOR_ALIAS);
 
-        int currentVectorState = pm.getComponentEnabledSetting(vectorAlias);
-        int currentDefaultState = pm.getComponentEnabledSetting(defaultAlias);
+        ComponentName defaultAlias =
+                new ComponentName(this, DEFAULT_ALIAS);
+
+        int currentVectorState =
+                pm.getComponentEnabledSetting(vectorAlias);
+
+        int currentDefaultState =
+                pm.getComponentEnabledSetting(defaultAlias);
 
         if (vectorActive) {
-            if (currentVectorState != PackageManager.COMPONENT_ENABLED_STATE_ENABLED) {
+            if (currentVectorState !=
+                    PackageManager.COMPONENT_ENABLED_STATE_ENABLED) {
+
                 pm.setComponentEnabledSetting(
                         vectorAlias,
                         PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
                         PackageManager.DONT_KILL_APP
                 );
             }
-            if (currentDefaultState != PackageManager.COMPONENT_ENABLED_STATE_DISABLED) {
+
+            if (currentDefaultState !=
+                    PackageManager.COMPONENT_ENABLED_STATE_DISABLED) {
+
                 pm.setComponentEnabledSetting(
                         defaultAlias,
                         PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
                         PackageManager.DONT_KILL_APP
                 );
             }
+
         } else {
-            if (currentVectorState != PackageManager.COMPONENT_ENABLED_STATE_DISABLED) {
+            if (currentVectorState !=
+                    PackageManager.COMPONENT_ENABLED_STATE_DISABLED) {
+
                 pm.setComponentEnabledSetting(
                         vectorAlias,
                         PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
                         PackageManager.DONT_KILL_APP
                 );
             }
-            if (currentDefaultState != PackageManager.COMPONENT_ENABLED_STATE_ENABLED) {
+
+            if (currentDefaultState !=
+                    PackageManager.COMPONENT_ENABLED_STATE_ENABLED) {
+
                 pm.setComponentEnabledSetting(
                         defaultAlias,
                         PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
@@ -143,6 +177,16 @@ public class MainActivity extends Activity {
                 );
             }
         }
+    }
+
+    private void updateQuickSettingsTile(boolean vectorActive) {
+        TileService.requestListeningState(
+                this,
+                new ComponentName(
+                        this,
+                        StartTileService.class
+                )
+        );
     }
 
     @Override
