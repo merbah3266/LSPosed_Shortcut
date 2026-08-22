@@ -8,8 +8,8 @@ android {
         applicationId "merbah3266.lsposed.start"
         minSdkVersion 27
         targetSdkVersion 36
-        versionCode 3
-        versionName "2.0"
+        versionCode 4
+        versionName "2.1"
     }
 
     buildTypes {
