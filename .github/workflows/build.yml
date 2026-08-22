@@ -7,59 +7,73 @@ jobs:
   build_and_sign:
     name: Build APK & Sign
     runs-on: ubuntu-latest
+
     steps:
-    - name: Checkout Code
-      uses: actions/checkout@v4
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
-    - name: Set up JDK 8
-      uses: actions/setup-java@v4
-      with:
-        java-version: '8'
-        distribution: 'temurin'
-        cache: gradle
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
 
-    - name: Grant execute permission
-      run: chmod +x gradlew
+      - name: Set up Android SDK
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
+            "platforms;android-36" \
+            "build-tools;36.0.0"
 
-    - name: Build APKs
-      run: ./gradlew assembleDebug assembleRelease
+      - name: Grant execute permission
+        run: chmod +x gradlew
 
-    - name: Extract Version Name
-      id: vars
-      run: |
-        VERSION_NAME=$(grep "versionName" app/build.gradle | head -n 1 | awk -F '["'\'']' '{print $2}')
-        echo "VERSION_NAME=${VERSION_NAME:-unknown}" >> $GITHUB_ENV
+      - name: Build APKs
+        run: ./gradlew assembleDebug assembleRelease
 
-    - name: Sign Release APK
-      uses: r0adkll/sign-android-release@v1
-      id: sign_app
-      with:
-        releaseDirectory: app/build/outputs/apk/release
-        signingKeyBase64: ${{ secrets.SIGNATURE }}
-        alias: ${{ secrets.SIGNATURE_ALIAS }}
-        keyStorePassword: ${{ secrets.SIGNATURE_PASSWORD }}
-        keyPassword: ${{ secrets.SIGNATURE_PASSWORD }}
-      env:
-        BUILD_TOOLS_VERSION: "34.0.0"
+      - name: Extract Version Name
+        id: vars
+        run: |
+          VERSION_NAME=$(grep "versionName" app/build.gradle | head -n 1 | awk -F '["'\'']' '{print $2}')
+          echo "VERSION_NAME=${VERSION_NAME:-unknown}" >> "$GITHUB_ENV"
 
-    - name: Prepare Final Files
-      run: |
-        rm -rf final_apks && mkdir -p final_apks
-        SIGNED_FILE=$(find app/build/outputs/apk/release -name "*-signed.apk" | head -n 1)
-        if [ -f "$SIGNED_FILE" ]; then
-          cp "$SIGNED_FILE" final_apks/lsposed_shortcut_v${{ env.VERSION_NAME }}_signed.apk
-        fi
-        
-        DEBUG_FILE="app/build/outputs/apk/debug/app-debug.apk"
-        if [ -f "$DEBUG_FILE" ]; then
-          cp "$DEBUG_FILE" final_apks/temp-unsigned.apk
-          zip -d final_apks/temp-unsigned.apk "META-INF/*" || true
-          mv final_apks/temp-unsigned.apk final_apks/lsposed_shortcut_v${{ env.VERSION_NAME }}_unsigned.apk
-        fi
+      - name: Sign Release APK
+        uses: r0adkll/sign-android-release@v1
+        id: sign_app
+        with:
+          releaseDirectory: app/build/outputs/apk/release
+          signingKeyBase64: ${{ secrets.SIGNATURE }}
+          alias: ${{ secrets.SIGNATURE_ALIAS }}
+          keyStorePassword: ${{ secrets.SIGNATURE_PASSWORD }}
+          keyPassword: ${{ secrets.SIGNATURE_PASSWORD }}
+        env:
+          BUILD_TOOLS_VERSION: "36.0.0"
 
-    - name: Upload Final Bundle
-      uses: actions/upload-artifact@v4
-      with:
-        name: lsposed_shortcut_v${{ env.VERSION_NAME }}_builds
-        path: final_apks/*.apk
-        if-no-files-found: error
+      - name: Prepare Final Files
+        run: |
+          rm -rf final_apks
+          mkdir -p final_apks
+
+          SIGNED_FILE=$(find app/build/outputs/apk/release -name "*-signed.apk" | head -n 1)
+
+          if [ -f "$SIGNED_FILE" ]; then
+            cp "$SIGNED_FILE" \
+              "final_apks/lsposed_shortcut_v${VERSION_NAME}_signed.apk"
+          fi
+
+          DEBUG_FILE="app/build/outputs/apk/debug/app-debug.apk"
+
+          if [ -f "$DEBUG_FILE" ]; then
+            cp "$DEBUG_FILE" final_apks/temp-unsigned.apk
+            zip -d final_apks/temp-unsigned.apk "META-INF/*" || true
+            mv final_apks/temp-unsigned.apk \
+              "final_apks/lsposed_shortcut_v${VERSION_NAME}_unsigned.apk"
+          fi
+
+      - name: Upload Final Bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: lsposed_shortcut_v${{ env.VERSION_NAME }}_builds
+          path: final_apks/*.apk
+          if-no-files-found: error

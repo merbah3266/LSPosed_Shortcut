@@ -21,10 +21,12 @@
             android:icon="@drawable/ic_launcher"
             android:label="LSPosed"
             android:targetActivity=".MainActivity">
+
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
         </activity-alias>
 
         <activity-alias
@@ -35,11 +37,26 @@
             android:icon="@drawable/ic_launcher_vector"
             android:label="Vector"
             android:targetActivity=".MainActivity">
+
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
         </activity-alias>
+
+        <service
+            android:name=".StartTileService"
+            android:label="LSPosed"
+            android:icon="@drawable/ic_qs_lsposed"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
+            android:exported="true">
+
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+
+        </service>
 
     </application>
 

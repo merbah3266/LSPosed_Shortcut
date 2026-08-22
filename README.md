@@ -4,10 +4,11 @@ A simple Android shortcut for quickly accessing LSPosed Manager or Vector.
 
 ## Features
 
-- Opens LSPosed Manager with one tap.
+- Opens LSPosed Manager or Vector with one tap.
+- Can also be launched directly from a Quick Settings tile.
 - Automatically detects whether Vector is active.
-- Switches between the LSPosed and Vector launcher icons automatically.
-- Requires root access.
+- Dynamically switches between the LSPosed and Vector launcher icons.
+- Dynamically updates the Quick Settings tile name, icon, and description based on the active manager.
 
 ## Requirements
 

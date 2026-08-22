@@ -1,14 +1,15 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 33
+    namespace "merbah3266.lsposed.start"
+    compileSdkVersion 36
+
     defaultConfig {
         applicationId "merbah3266.lsposed.start"
         minSdkVersion 27
         targetSdkVersion 36
-        versionCode 3
-        versionName "2.0"
-        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+        versionCode 4
+        versionName "2.1"
     }
 
     buildTypes {
@@ -19,8 +20,7 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
 }
-
