@@ -1,19 +1,16 @@
 package merbah3266.lsposed.start;
 
 import android.app.PendingIntent;
+import android.content.ComponentName;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.content.pm.ServiceInfo;
 import android.graphics.drawable.Icon;
 import android.os.Build;
 import android.service.quicksettings.Tile;
 import android.service.quicksettings.TileService;
 
 public class StartTileService extends TileService {
-
-    @Override
-    public int onStartCommand(Intent intent, int flags, int startId) {
-        stopSelf();
-        return START_NOT_STICKY;
-    }
 
     @Override
     public void onStartListening() {
@@ -25,7 +22,7 @@ public class StartTileService extends TileService {
             return;
         }
 
-        updateTile(MainActivity.getSavedVectorState(this));
+        updateTile(MainActivity.getTileMode(this));
 
         Intent intent = new Intent(this, MainActivity.class);
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -64,14 +61,14 @@ public class StartTileService extends TileService {
         }
     }
 
-    private void updateTile(boolean vectorActive) {
+    private void updateTile(int mode) {
         Tile tile = getQsTile();
 
         if (tile == null) {
             return;
         }
 
-        if (vectorActive) {
+        if (mode == MainActivity.TILE_VECTOR) {
             tile.setLabel("Vector");
             tile.setIcon(
                     Icon.createWithResource(
@@ -83,7 +80,8 @@ public class StartTileService extends TileService {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 tile.setSubtitle("Launch Vector");
             }
-        } else {
+
+        } else if (mode == MainActivity.TILE_LSPOSED) {
             tile.setLabel("LSPosed");
             tile.setIcon(
                     Icon.createWithResource(
@@ -95,10 +93,48 @@ public class StartTileService extends TileService {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 tile.setSubtitle("Launch LSPosed");
             }
+
+        } else {
+            restoreManifestTile(tile);
         }
 
         tile.setState(Tile.STATE_INACTIVE);
         tile.updateTile();
+    }
+
+    private void restoreManifestTile(Tile tile) {
+        try {
+            PackageManager pm = getPackageManager();
+
+            ComponentName componentName =
+                    new ComponentName(this, StartTileService.class);
+
+            ServiceInfo serviceInfo = pm.getServiceInfo(
+                    componentName,
+                    PackageManager.GET_META_DATA
+            );
+
+            CharSequence label = serviceInfo.loadLabel(pm);
+
+            if (label != null) {
+                tile.setLabel(label);
+            }
+
+            if (serviceInfo.icon != 0) {
+                tile.setIcon(
+                        Icon.createWithResource(
+                                this,
+                                serviceInfo.icon
+                        )
+                );
+            }
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                tile.setSubtitle(null);
+            }
+
+        } catch (PackageManager.NameNotFoundException ignored) {
+        }
     }
 
     @Override
