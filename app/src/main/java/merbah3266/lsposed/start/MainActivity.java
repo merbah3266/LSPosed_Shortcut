@@ -89,48 +89,44 @@ public class MainActivity extends Activity {
                     "fi; " +
 
                     "echo STAGE:VECTOR; " +
-                    "VECTOR=0; " +
                     "if [ -d '" + VECTOR_MODULE + "' ] && " +
                     "[ ! -e '" + VECTOR_MODULE + "/disable' ]; then " +
-                        "VECTOR=1; " +
-                    "fi; " +
 
-                    "echo STAGE:LSPOSED; " +
-                    "LSPOSED=0; " +
-                    "if [ -d '" + LSPOSED_MODULE + "' ] && " +
-                    "[ ! -e '" + LSPOSED_MODULE + "/disable' ]; then " +
-                        "LSPOSED=1; " +
-                    "fi; " +
-
-                    "if [ \"$VECTOR\" = \"1\" ]; then " +
                         "echo STAGE:BROADCAST_VECTOR; " +
                         "am broadcast --user 0 " +
                         "-a " + action + " " +
                         "-d android_secret_code://" +
                         VECTOR_SECRET_CODE +
                         " >/dev/null 2>&1; " +
-                        "STATUS=$?; " +
-                        "if [ \"$STATUS\" != \"0\" ]; then " +
-                            "exit " + RESULT_BROADCAST_FAILED + "; " +
-                        "fi; " +
-                        "exit " + RESULT_VECTOR + "; " +
 
-                    "elif [ \"$LSPOSED\" = \"1\" ]; then " +
+                        "STATUS=$?; " +
+                        "if [ \"$STATUS\" = \"0\" ]; then " +
+                            "exit " + RESULT_VECTOR + "; " +
+                        "fi; " +
+
+                        "exit " + RESULT_BROADCAST_FAILED + "; " +
+                    "fi; " +
+
+                    "echo STAGE:LSPOSED; " +
+                    "if [ -d '" + LSPOSED_MODULE + "' ] && " +
+                    "[ ! -e '" + LSPOSED_MODULE + "/disable' ]; then " +
+
                         "echo STAGE:BROADCAST_LSPOSED; " +
                         "am broadcast --user 0 " +
                         "-a " + action + " " +
                         "-d android_secret_code://" +
                         LSPOSED_SECRET_CODE +
                         " >/dev/null 2>&1; " +
-                        "STATUS=$?; " +
-                        "if [ \"$STATUS\" != \"0\" ]; then " +
-                            "exit " + RESULT_BROADCAST_FAILED + "; " +
-                        "fi; " +
-                        "exit " + RESULT_LSPOSED + "; " +
 
-                    "else " +
-                        "exit " + RESULT_DEFAULT + "; " +
-                    "fi";
+                        "STATUS=$?; " +
+                        "if [ \"$STATUS\" = \"0\" ]; then " +
+                            "exit " + RESULT_LSPOSED + "; " +
+                        "fi; " +
+
+                        "exit " + RESULT_BROADCAST_FAILED + "; " +
+                    "fi; " +
+
+                    "exit " + RESULT_DEFAULT;
 
             process = new ProcessBuilder(
                     "su",
@@ -178,6 +174,7 @@ public class MainActivity extends Activity {
                 }
             });
 
+            outputReader.setDaemon(true);
             outputReader.start();
 
             boolean finished = process.waitFor(
@@ -195,28 +192,27 @@ public class MainActivity extends Activity {
                 );
             }
 
-            outputReader.join(200);
-
             int exitCode = process.exitValue();
+            String stage = currentStage.get();
 
             if (exitCode == RESULT_VECTOR) {
                 return new RootResult(
                         RESULT_VECTOR,
-                        currentStage.get()
+                        stage
                 );
             }
 
             if (exitCode == RESULT_LSPOSED) {
                 return new RootResult(
                         RESULT_LSPOSED,
-                        currentStage.get()
+                        stage
                 );
             }
 
             if (exitCode == RESULT_DEFAULT) {
                 return new RootResult(
                         RESULT_DEFAULT,
-                        currentStage.get()
+                        stage
                 );
             }
 
@@ -230,13 +226,20 @@ public class MainActivity extends Activity {
             if (exitCode == RESULT_BROADCAST_FAILED) {
                 return new RootResult(
                         RESULT_BROADCAST_FAILED,
-                        currentStage.get()
+                        stage
+                );
+            }
+
+            if (stage.equals(STAGE_ROOT)) {
+                return new RootResult(
+                        RESULT_ROOT_FAILED,
+                        stage
                 );
             }
 
             return new RootResult(
                     RESULT_UNKNOWN,
-                    currentStage.get()
+                    stage
             );
 
         } catch (Exception e) {
