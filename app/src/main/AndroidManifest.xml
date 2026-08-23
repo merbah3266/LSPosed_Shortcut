@@ -5,7 +5,8 @@
     <application
         android:allowBackup="true"
         android:label="LSPosed Shortcut"
-        android:icon="@drawable/ic_launcher"
+        android:icon="@drawable/ic_main_icon"
+        android:roundIcon="@drawable/ic_main_icon"
         android:theme="@style/Theme.Invisible">
 
         <activity
@@ -47,8 +48,8 @@
 
         <service
             android:name=".StartTileService"
-            android:label="LSPosed"
-            android:icon="@drawable/ic_qs_lsposed"
+            android:label="LSPosed Shortcut"
+            android:icon="@drawable/ic_main_icon_monochrome"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
             android:exported="true">
 
