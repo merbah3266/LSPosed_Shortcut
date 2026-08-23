@@ -45,25 +45,24 @@ public class MainActivity extends Activity {
     private static final int RESULT_DEFAULT = 0;
     private static final int RESULT_VECTOR = 1;
     private static final int RESULT_LSPOSED = 2;
-
     private static final int RESULT_ROOT_FAILED = 10;
     private static final int RESULT_BROADCAST_FAILED = 11;
     private static final int RESULT_TIMEOUT = 12;
     private static final int RESULT_UNKNOWN = 13;
 
-    private static final String STAGE_START = "بدء جلسة root";
-    private static final String STAGE_ROOT = "التحقق من صلاحيات root";
-    private static final String STAGE_VECTOR = "فحص Vector";
-    private static final String STAGE_LSPOSED = "فحص LSPosed";
-    private static final String STAGE_BROADCAST_VECTOR = "إرسال أمر Vector";
-    private static final String STAGE_BROADCAST_LSPOSED = "إرسال أمر LSPosed";
+    private static final String STAGE_START = "starting root session";
+    private static final String STAGE_ROOT = "checking root permission";
+    private static final String STAGE_VECTOR = "checking Vector";
+    private static final String STAGE_LSPOSED = "checking LSPosed";
+    private static final String STAGE_BROADCAST_VECTOR = "sending Vector command";
+    private static final String STAGE_BROADCAST_LSPOSED = "sending LSPosed command";
 
     private final ExecutorService executor =
             Executors.newSingleThreadExecutor();
 
     private static final class RootResult {
-        int result;
-        String stage;
+        final int result;
+        final String stage;
 
         RootResult(int result, String stage) {
             this.result = result;
@@ -86,7 +85,6 @@ public class MainActivity extends Activity {
                     "echo STAGE:ROOT; " +
 
                     "if [ \"$(id -u)\" != \"0\" ]; then " +
-                        "echo RESULT:ROOT_FAILED; " +
                         "exit " + RESULT_ROOT_FAILED + "; " +
                     "fi; " +
 
@@ -113,11 +111,9 @@ public class MainActivity extends Activity {
                         " >/dev/null 2>&1; " +
                         "STATUS=$?; " +
                         "if [ \"$STATUS\" != \"0\" ]; then " +
-                            "echo RESULT:BROADCAST_FAILED; " +
                             "exit " + RESULT_BROADCAST_FAILED + "; " +
                         "fi; " +
-                        "echo RESULT:VECTOR; " +
-                        "exit 0; " +
+                        "exit " + RESULT_VECTOR + "; " +
 
                     "elif [ \"$LSPOSED\" = \"1\" ]; then " +
                         "echo STAGE:BROADCAST_LSPOSED; " +
@@ -128,15 +124,12 @@ public class MainActivity extends Activity {
                         " >/dev/null 2>&1; " +
                         "STATUS=$?; " +
                         "if [ \"$STATUS\" != \"0\" ]; then " +
-                            "echo RESULT:BROADCAST_FAILED; " +
                             "exit " + RESULT_BROADCAST_FAILED + "; " +
                         "fi; " +
-                        "echo RESULT:LSPOSED; " +
-                        "exit 0; " +
+                        "exit " + RESULT_LSPOSED + "; " +
 
                     "else " +
-                        "echo RESULT:DEFAULT; " +
-                        "exit 0; " +
+                        "exit " + RESULT_DEFAULT + "; " +
                     "fi";
 
             process = new ProcessBuilder(
@@ -194,7 +187,6 @@ public class MainActivity extends Activity {
 
             if (!finished) {
                 String stage = currentStage.get();
-
                 process.destroyForcibly();
 
                 return new RootResult(
@@ -207,6 +199,27 @@ public class MainActivity extends Activity {
 
             int exitCode = process.exitValue();
 
+            if (exitCode == RESULT_VECTOR) {
+                return new RootResult(
+                        RESULT_VECTOR,
+                        currentStage.get()
+                );
+            }
+
+            if (exitCode == RESULT_LSPOSED) {
+                return new RootResult(
+                        RESULT_LSPOSED,
+                        currentStage.get()
+                );
+            }
+
+            if (exitCode == RESULT_DEFAULT) {
+                return new RootResult(
+                        RESULT_DEFAULT,
+                        currentStage.get()
+                );
+            }
+
             if (exitCode == RESULT_ROOT_FAILED) {
                 return new RootResult(
                         RESULT_ROOT_FAILED,
@@ -217,27 +230,6 @@ public class MainActivity extends Activity {
             if (exitCode == RESULT_BROADCAST_FAILED) {
                 return new RootResult(
                         RESULT_BROADCAST_FAILED,
-                        currentStage.get()
-                );
-            }
-
-            if (exitCode == 0) {
-                if (currentStage.get().equals(STAGE_BROADCAST_VECTOR)) {
-                    return new RootResult(
-                            RESULT_VECTOR,
-                            currentStage.get()
-                    );
-                }
-
-                if (currentStage.get().equals(STAGE_BROADCAST_LSPOSED)) {
-                    return new RootResult(
-                            RESULT_LSPOSED,
-                            currentStage.get()
-                    );
-                }
-
-                return new RootResult(
-                        RESULT_DEFAULT,
                         currentStage.get()
                 );
             }
@@ -295,7 +287,6 @@ public class MainActivity extends Activity {
 
             runOnUiThread(() -> {
                 switch (result.result) {
-
                     case RESULT_VECTOR:
                         saveTileMode(this, TILE_VECTOR);
                         updateLauncherIdentity(true);
@@ -312,13 +303,14 @@ public class MainActivity extends Activity {
 
                     case RESULT_DEFAULT:
                         saveTileMode(this, TILE_DEFAULT);
+                        updateLauncherIdentity(false);
                         refreshQuickSettingsTile(this);
                         finish();
                         break;
 
                     case RESULT_TIMEOUT:
                         showError(
-                                "E354 — انتهت المهلة أثناء " +
+                                "E354 — Timeout during " +
                                 result.stage
                         );
                         finish();
@@ -326,14 +318,14 @@ public class MainActivity extends Activity {
 
                     case RESULT_ROOT_FAILED:
                         showError(
-                                "E351 — فشل الحصول على صلاحيات root"
+                                "E351 — Root permission failed"
                         );
                         finish();
                         break;
 
                     case RESULT_BROADCAST_FAILED:
                         showError(
-                                "E353 — فشل إرسال الأمر أثناء " +
+                                "E353 — Broadcast failed during " +
                                 result.stage
                         );
                         finish();
@@ -341,7 +333,7 @@ public class MainActivity extends Activity {
 
                     default:
                         showError(
-                                "E355 — خطأ غير معروف أثناء " +
+                                "E355 — Unknown error during " +
                                 result.stage
                         );
                         finish();
@@ -394,7 +386,6 @@ public class MainActivity extends Activity {
                         PackageManager.DONT_KILL_APP
                 );
             }
-
         } else {
             if (currentVectorState !=
                     PackageManager.COMPONENT_ENABLED_STATE_DISABLED) {
