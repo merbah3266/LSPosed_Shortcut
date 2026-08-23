@@ -10,6 +10,12 @@ import android.service.quicksettings.TileService;
 public class StartTileService extends TileService {
 
     @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        stopSelf();
+        return START_NOT_STICKY;
+    }
+
+    @Override
     public void onStartListening() {
         super.onStartListening();
 
