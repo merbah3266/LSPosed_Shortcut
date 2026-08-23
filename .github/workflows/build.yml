@@ -10,10 +10,10 @@ jobs:
 
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: '17'
           distribution: 'temurin'
@@ -55,11 +55,14 @@ jobs:
           rm -rf final_apks
           mkdir -p final_apks
 
-          SIGNED_FILE=$(find app/build/outputs/apk/release -name "*-signed.apk" | head -n 1)
+          SIGNED_FILE="${{ steps.sign_app.outputs.signedReleaseFile }}"
 
           if [ -f "$SIGNED_FILE" ]; then
             cp "$SIGNED_FILE" \
               "final_apks/lsposed_shortcut_v${VERSION_NAME}_signed.apk"
+          else
+            echo "Signed APK not found"
+            exit 1
           fi
 
           DEBUG_FILE="app/build/outputs/apk/debug/app-debug.apk"
@@ -72,7 +75,7 @@ jobs:
           fi
 
       - name: Upload Final Bundle
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: lsposed_shortcut_v${{ env.VERSION_NAME }}_builds
           path: final_apks/*.apk
