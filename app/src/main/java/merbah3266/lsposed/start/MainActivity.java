@@ -10,6 +10,7 @@ import android.service.quicksettings.TileService;
 import android.widget.Toast;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -18,17 +19,11 @@ import java.util.concurrent.atomic.AtomicReference;
 
 public class MainActivity extends Activity {
 
-    private static final String VECTOR_MODULE =
-            "/data/adb/modules/zygisk_vector";
+    private static final String VECTOR_MODULE = "/data/adb/modules/zygisk_vector";
+    private static final String LSPOSED_MODULE = "/data/adb/modules/zygisk_lsposed";
 
-    private static final String LSPOSED_MODULE =
-            "/data/adb/modules/zygisk_lsposed";
-
-    private static final String VECTOR_ALIAS =
-            "merbah3266.lsposed.start.VectorAlias";
-
-    private static final String DEFAULT_ALIAS =
-            "merbah3266.lsposed.start.DefaultAlias";
+    private static final String VECTOR_ALIAS = "merbah3266.lsposed.start.VectorAlias";
+    private static final String DEFAULT_ALIAS = "merbah3266.lsposed.start.DefaultAlias";
 
     private static final String VECTOR_SECRET_CODE = "832867";
     private static final String LSPOSED_SECRET_CODE = "5776733";
@@ -57,8 +52,7 @@ public class MainActivity extends Activity {
     private static final String STAGE_BROADCAST_VECTOR = "sending Vector command";
     private static final String STAGE_BROADCAST_LSPOSED = "sending LSPosed command";
 
-    private final ExecutorService executor =
-            Executors.newSingleThreadExecutor();
+    private final ExecutorService executor = Executors.newSingleThreadExecutor();
 
     private static final class RootResult {
         final int result;
@@ -72,9 +66,7 @@ public class MainActivity extends Activity {
 
     private RootResult checkAndLaunch() {
         Process process = null;
-
-        AtomicReference<String> currentStage =
-                new AtomicReference<>(STAGE_START);
+        AtomicReference<String> currentStage = new AtomicReference<>(STAGE_START);
 
         try {
             String action = Build.VERSION.SDK_INT >= 29
@@ -83,171 +75,83 @@ public class MainActivity extends Activity {
 
             String command =
                     "echo STAGE:ROOT; " +
-
-                    "if [ \"$(id -u)\" != \"0\" ]; then " +
-                        "exit " + RESULT_ROOT_FAILED + "; " +
-                    "fi; " +
+                    "[ \"$(id -u)\" != \"0\" ] && exit " + RESULT_ROOT_FAILED + "; " +
 
                     "echo STAGE:VECTOR; " +
-                    "if [ -d '" + VECTOR_MODULE + "' ] && " +
-                    "[ ! -e '" + VECTOR_MODULE + "/disable' ]; then " +
-
+                    "if [ -d '" + VECTOR_MODULE + "' ] && [ ! -e '" + VECTOR_MODULE + "/disable' ]; then " +
                         "echo STAGE:BROADCAST_VECTOR; " +
-                        "am broadcast --user 0 " +
-                        "-a " + action + " " +
-                        "-d android_secret_code://" +
-                        VECTOR_SECRET_CODE +
-                        " >/dev/null 2>&1; " +
-
-                        "STATUS=$?; " +
-                        "if [ \"$STATUS\" = \"0\" ]; then " +
-                            "exit " + RESULT_VECTOR + "; " +
-                        "fi; " +
-
+                        "am broadcast --user 0 -a " + action + " -d android_secret_code://" + VECTOR_SECRET_CODE + " >/dev/null 2>&1 && exit " + RESULT_VECTOR + "; " +
                         "exit " + RESULT_BROADCAST_FAILED + "; " +
                     "fi; " +
 
                     "echo STAGE:LSPOSED; " +
-                    "if [ -d '" + LSPOSED_MODULE + "' ] && " +
-                    "[ ! -e '" + LSPOSED_MODULE + "/disable' ]; then " +
-
+                    "if [ -d '" + LSPOSED_MODULE + "' ] && [ ! -e '" + LSPOSED_MODULE + "/disable' ]; then " +
                         "echo STAGE:BROADCAST_LSPOSED; " +
-                        "am broadcast --user 0 " +
-                        "-a " + action + " " +
-                        "-d android_secret_code://" +
-                        LSPOSED_SECRET_CODE +
-                        " >/dev/null 2>&1; " +
-
-                        "STATUS=$?; " +
-                        "if [ \"$STATUS\" = \"0\" ]; then " +
-                            "exit " + RESULT_LSPOSED + "; " +
-                        "fi; " +
-
+                        "am broadcast --user 0 -a " + action + " -d android_secret_code://" + LSPOSED_SECRET_CODE + " >/dev/null 2>&1 && exit " + RESULT_LSPOSED + "; " +
                         "exit " + RESULT_BROADCAST_FAILED + "; " +
                     "fi; " +
 
                     "exit " + RESULT_DEFAULT;
 
-            process = new ProcessBuilder(
-                    "su",
-                    "-c",
-                    command
-            ).redirectErrorStream(true).start();
+            process = new ProcessBuilder("su", "-c", command)
+                    .redirectErrorStream(true)
+                    .start();
 
             Process finalProcess = process;
 
             Thread outputReader = new Thread(() -> {
-                try {
-                    BufferedReader reader =
-                            new BufferedReader(
-                                    new InputStreamReader(
-                                            finalProcess.getInputStream()
-                                    )
-                            );
-
+                try (BufferedReader reader = new BufferedReader(
+                        new InputStreamReader(finalProcess.getInputStream()))) {
                     String line;
-
                     while ((line = reader.readLine()) != null) {
                         switch (line) {
                             case "STAGE:ROOT":
                                 currentStage.set(STAGE_ROOT);
                                 break;
-
                             case "STAGE:VECTOR":
                                 currentStage.set(STAGE_VECTOR);
                                 break;
-
                             case "STAGE:LSPOSED":
                                 currentStage.set(STAGE_LSPOSED);
                                 break;
-
                             case "STAGE:BROADCAST_VECTOR":
                                 currentStage.set(STAGE_BROADCAST_VECTOR);
                                 break;
-
                             case "STAGE:BROADCAST_LSPOSED":
                                 currentStage.set(STAGE_BROADCAST_LSPOSED);
                                 break;
                         }
                     }
-                } catch (Exception ignored) {
-                }
+                } catch (Exception ignored) {}
             });
-
             outputReader.setDaemon(true);
             outputReader.start();
 
-            boolean finished = process.waitFor(
-                    SU_TIMEOUT_SECONDS,
-                    TimeUnit.SECONDS
-            );
+            boolean finished = process.waitFor(SU_TIMEOUT_SECONDS, TimeUnit.SECONDS);
 
             if (!finished) {
                 String stage = currentStage.get();
                 process.destroyForcibly();
-
-                return new RootResult(
-                        RESULT_TIMEOUT,
-                        stage
-                );
+                return new RootResult(RESULT_TIMEOUT, stage);
             }
 
             int exitCode = process.exitValue();
             String stage = currentStage.get();
 
-            if (exitCode == RESULT_VECTOR) {
-                return new RootResult(
-                        RESULT_VECTOR,
-                        stage
-                );
-            }
+            if (exitCode == RESULT_VECTOR) return new RootResult(RESULT_VECTOR, stage);
+            if (exitCode == RESULT_LSPOSED) return new RootResult(RESULT_LSPOSED, stage);
+            if (exitCode == RESULT_DEFAULT) return new RootResult(RESULT_DEFAULT, stage);
+            if (exitCode == RESULT_ROOT_FAILED) return new RootResult(RESULT_ROOT_FAILED, STAGE_ROOT);
+            if (exitCode == RESULT_BROADCAST_FAILED) return new RootResult(RESULT_BROADCAST_FAILED, stage);
+            
+            if (stage.equals(STAGE_ROOT)) return new RootResult(RESULT_ROOT_FAILED, stage);
+            
+            return new RootResult(RESULT_UNKNOWN, stage);
 
-            if (exitCode == RESULT_LSPOSED) {
-                return new RootResult(
-                        RESULT_LSPOSED,
-                        stage
-                );
-            }
-
-            if (exitCode == RESULT_DEFAULT) {
-                return new RootResult(
-                        RESULT_DEFAULT,
-                        stage
-                );
-            }
-
-            if (exitCode == RESULT_ROOT_FAILED) {
-                return new RootResult(
-                        RESULT_ROOT_FAILED,
-                        STAGE_ROOT
-                );
-            }
-
-            if (exitCode == RESULT_BROADCAST_FAILED) {
-                return new RootResult(
-                        RESULT_BROADCAST_FAILED,
-                        stage
-                );
-            }
-
-            if (stage.equals(STAGE_ROOT)) {
-                return new RootResult(
-                        RESULT_ROOT_FAILED,
-                        stage
-                );
-            }
-
-            return new RootResult(
-                    RESULT_UNKNOWN,
-                    stage
-            );
-
+        } catch (IOException e) {
+            return new RootResult(RESULT_ROOT_FAILED, STAGE_ROOT);
         } catch (Exception e) {
-            return new RootResult(
-                    RESULT_UNKNOWN,
-                    currentStage.get()
-            );
-
+            return new RootResult(RESULT_UNKNOWN, currentStage.get());
         } finally {
             if (process != null) {
                 process.destroy();
@@ -255,30 +159,29 @@ public class MainActivity extends Activity {
         }
     }
 
+    private String getReadableStage(String stage) {
+        switch (stage) {
+            case STAGE_ROOT: return "checking root permission";
+            case STAGE_VECTOR: return "checking Vector";
+            case STAGE_LSPOSED: return "checking LSPosed";
+            case STAGE_BROADCAST_VECTOR: return "sending Vector command";
+            case STAGE_BROADCAST_LSPOSED: return "sending LSPosed command";
+            default: return "initializing";
+        }
+    }
+
     public static void saveTileMode(Context context, int mode) {
-        context.getSharedPreferences(
-                PREFS_NAME,
-                Context.MODE_PRIVATE
-        ).edit()
-                .putInt(KEY_TILE_MODE, mode)
-                .apply();
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .edit().putInt(KEY_TILE_MODE, mode).apply();
     }
 
     public static int getTileMode(Context context) {
-        return context.getSharedPreferences(
-                PREFS_NAME,
-                Context.MODE_PRIVATE
-        ).getInt(KEY_TILE_MODE, TILE_DEFAULT);
+        return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .getInt(KEY_TILE_MODE, TILE_DEFAULT);
     }
 
     public static void refreshQuickSettingsTile(Context context) {
-        TileService.requestListeningState(
-                context,
-                new ComponentName(
-                        context,
-                        StartTileService.class
-                )
-        );
+        TileService.requestListeningState(context, new ComponentName(context, StartTileService.class));
     }
 
     @Override
@@ -289,6 +192,10 @@ public class MainActivity extends Activity {
             RootResult result = checkAndLaunch();
 
             runOnUiThread(() -> {
+                if (isFinishing() || isDestroyed()) return;
+
+                String readableStage = getReadableStage(result.stage);
+
                 switch (result.result) {
                     case RESULT_VECTOR:
                         saveTileMode(this, TILE_VECTOR);
@@ -311,34 +218,26 @@ public class MainActivity extends Activity {
                         finish();
                         break;
 
-                    case RESULT_TIMEOUT:
-                        showError(
-                                "E354 — Timeout during " +
-                                result.stage
-                        );
-                        finish();
-                        break;
-
                     case RESULT_ROOT_FAILED:
-                        showError(
-                                "E351 — Root permission failed"
-                        );
+                        saveTileMode(this, TILE_DEFAULT);
+                        updateLauncherIdentity(false);
+                        refreshQuickSettingsTile(this);
+                        showError("Root permission failed or denied");
                         finish();
                         break;
 
                     case RESULT_BROADCAST_FAILED:
-                        showError(
-                                "E353 — Broadcast failed during " +
-                                result.stage
-                        );
+                        showError("Broadcast failed during: " + readableStage);
+                        finish();
+                        break;
+
+                    case RESULT_TIMEOUT:
+                        showError("Timeout during: " + readableStage);
                         finish();
                         break;
 
                     default:
-                        showError(
-                                "E355 — Unknown error during " +
-                                result.stage
-                        );
+                        showError("Unknown error during: " + readableStage);
                         finish();
                         break;
                 }
@@ -347,74 +246,24 @@ public class MainActivity extends Activity {
     }
 
     private void showError(String message) {
-        Toast.makeText(
-                this,
-                message,
-                Toast.LENGTH_SHORT
-        ).show();
+        Toast.makeText(this, message, Toast.LENGTH_LONG).show();
     }
 
     private void updateLauncherIdentity(boolean vectorActive) {
         PackageManager pm = getPackageManager();
+        ComponentName vectorAlias = new ComponentName(this, VECTOR_ALIAS);
+        ComponentName defaultAlias = new ComponentName(this, DEFAULT_ALIAS);
 
-        ComponentName vectorAlias =
-                new ComponentName(this, VECTOR_ALIAS);
+        int newStateVector = vectorActive ? PackageManager.COMPONENT_ENABLED_STATE_ENABLED : PackageManager.COMPONENT_ENABLED_STATE_DISABLED;
+        int newStateDefault = vectorActive ? PackageManager.COMPONENT_ENABLED_STATE_DISABLED : PackageManager.COMPONENT_ENABLED_STATE_ENABLED;
 
-        ComponentName defaultAlias =
-                new ComponentName(this, DEFAULT_ALIAS);
-
-        int currentVectorState =
-                pm.getComponentEnabledSetting(vectorAlias);
-
-        int currentDefaultState =
-                pm.getComponentEnabledSetting(defaultAlias);
-
-        if (vectorActive) {
-            if (currentVectorState !=
-                    PackageManager.COMPONENT_ENABLED_STATE_ENABLED) {
-
-                pm.setComponentEnabledSetting(
-                        vectorAlias,
-                        PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
-                        PackageManager.DONT_KILL_APP
-                );
-            }
-
-            if (currentDefaultState !=
-                    PackageManager.COMPONENT_ENABLED_STATE_DISABLED) {
-
-                pm.setComponentEnabledSetting(
-                        defaultAlias,
-                        PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
-                        PackageManager.DONT_KILL_APP
-                );
-            }
-        } else {
-            if (currentVectorState !=
-                    PackageManager.COMPONENT_ENABLED_STATE_DISABLED) {
-
-                pm.setComponentEnabledSetting(
-                        vectorAlias,
-                        PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
-                        PackageManager.DONT_KILL_APP
-                );
-            }
-
-            if (currentDefaultState !=
-                    PackageManager.COMPONENT_ENABLED_STATE_ENABLED) {
-
-                pm.setComponentEnabledSetting(
-                        defaultAlias,
-                        PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
-                        PackageManager.DONT_KILL_APP
-                );
-            }
-        }
+        pm.setComponentEnabledSetting(vectorAlias, newStateVector, PackageManager.DONT_KILL_APP);
+        pm.setComponentEnabledSetting(defaultAlias, newStateDefault, PackageManager.DONT_KILL_APP);
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        executor.shutdown();
+        executor.shutdownNow();
     }
 }
