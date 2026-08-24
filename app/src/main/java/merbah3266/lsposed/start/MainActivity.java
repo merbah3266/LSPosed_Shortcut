@@ -19,8 +19,14 @@ import java.util.concurrent.atomic.AtomicReference;
 
 public class MainActivity extends Activity {
 
-    private static final String VECTOR_MODULE = "/data/adb/modules/zygisk_vector";
-    private static final String LSPOSED_MODULE = "/data/adb/modules/zygisk_lsposed";
+    private static final String VECTOR_MODULE =
+            "/data/adb/modules/zygisk_vector";
+
+    private static final String LSPOSED_MODULE =
+            "/data/adb/modules/zygisk_lsposed";
+
+    private static final String MAIN_ACTIVITY =
+            "merbah3266.lsposed.start.MainActivity";
 
     private static final String VECTOR_ALIAS =
             "merbah3266.lsposed.start.VectorAlias";
@@ -48,12 +54,21 @@ public class MainActivity extends Activity {
     private static final int RESULT_TIMEOUT = 12;
     private static final int RESULT_UNKNOWN = 13;
 
-    private static final String STAGE_START = "starting root session";
-    private static final String STAGE_ROOT = "checking root permission";
-    private static final String STAGE_VECTOR = "checking Vector";
-    private static final String STAGE_LSPOSED = "checking LSPosed";
+    private static final String STAGE_START =
+            "starting root session";
+
+    private static final String STAGE_ROOT =
+            "checking root permission";
+
+    private static final String STAGE_VECTOR =
+            "checking Vector";
+
+    private static final String STAGE_LSPOSED =
+            "checking LSPosed";
+
     private static final String STAGE_BROADCAST_VECTOR =
             "sending Vector command";
+
     private static final String STAGE_BROADCAST_LSPOSED =
             "sending LSPosed command";
 
@@ -90,32 +105,32 @@ public class MainActivity extends Activity {
                     + RESULT_ROOT_FAILED + "; " +
 
                     "echo STAGE:VECTOR; " +
-                    "if [ -d '" + VECTOR_MODULE + "' ] && "
-                    + "[ ! -e '" + VECTOR_MODULE + "/disable' ]; then " +
+                    "if [ -d '" + VECTOR_MODULE + "' ] && " +
+                    "[ ! -e '" + VECTOR_MODULE + "/disable' ]; then " +
 
                     "echo STAGE:BROADCAST_VECTOR; " +
 
-                    "am broadcast --user 0 -a " + action
-                    + " -d android_secret_code://"
-                    + VECTOR_SECRET_CODE
-                    + " >/dev/null 2>&1 && exit "
-                    + RESULT_VECTOR + "; " +
+                    "am broadcast --user 0 -a " + action +
+                    " -d android_secret_code://" +
+                    VECTOR_SECRET_CODE +
+                    " >/dev/null 2>&1 && exit " +
+                    RESULT_VECTOR + "; " +
 
                     "exit " + RESULT_BROADCAST_FAILED + "; " +
                     "fi; " +
 
                     "echo STAGE:LSPOSED; " +
 
-                    "if [ -d '" + LSPOSED_MODULE + "' ] && "
-                    + "[ ! -e '" + LSPOSED_MODULE + "/disable' ]; then " +
+                    "if [ -d '" + LSPOSED_MODULE + "' ] && " +
+                    "[ ! -e '" + LSPOSED_MODULE + "/disable' ]; then " +
 
                     "echo STAGE:BROADCAST_LSPOSED; " +
 
-                    "am broadcast --user 0 -a " + action
-                    + " -d android_secret_code://"
-                    + LSPOSED_SECRET_CODE
-                    + " >/dev/null 2>&1 && exit "
-                    + RESULT_LSPOSED + "; " +
+                    "am broadcast --user 0 -a " + action +
+                    " -d android_secret_code://" +
+                    LSPOSED_SECRET_CODE +
+                    " >/dev/null 2>&1 && exit " +
+                    RESULT_LSPOSED + "; " +
 
                     "exit " + RESULT_BROADCAST_FAILED + "; " +
                     "fi; " +
@@ -239,7 +254,7 @@ public class MainActivity extends Activity {
                 );
             }
 
-            if (stage.equals(STAGE_ROOT)) {
+            if (STAGE_ROOT.equals(stage)) {
                 return new RootResult(
                         RESULT_ROOT_FAILED,
                         stage
@@ -370,7 +385,6 @@ public class MainActivity extends Activity {
                         refreshQuickSettingsTile(this);
 
                         finish();
-
                         break;
 
                     case RESULT_LSPOSED:
@@ -387,7 +401,6 @@ public class MainActivity extends Activity {
                         refreshQuickSettingsTile(this);
 
                         finish();
-
                         break;
 
                     default:
@@ -403,16 +416,16 @@ public class MainActivity extends Activity {
 
                         refreshQuickSettingsTile(this);
 
-                        if (result.result
-                                == RESULT_ROOT_FAILED) {
+                        if (result.result ==
+                                RESULT_ROOT_FAILED) {
 
                             showError(
                                     "Root permission failed or denied"
                             );
 
                         } else if (
-                                result.result
-                                        == RESULT_BROADCAST_FAILED
+                                result.result ==
+                                        RESULT_BROADCAST_FAILED
                         ) {
 
                             showError(
@@ -421,8 +434,8 @@ public class MainActivity extends Activity {
                             );
 
                         } else if (
-                                result.result
-                                        == RESULT_TIMEOUT
+                                result.result ==
+                                        RESULT_TIMEOUT
                         ) {
 
                             showError(
@@ -441,7 +454,6 @@ public class MainActivity extends Activity {
                         }
 
                         finish();
-
                         break;
                 }
             });
@@ -461,6 +473,12 @@ public class MainActivity extends Activity {
 
         PackageManager pm = getPackageManager();
 
+        ComponentName mainActivity =
+                new ComponentName(
+                        this,
+                        MAIN_ACTIVITY
+                );
+
         ComponentName vectorAlias =
                 new ComponentName(
                         this,
@@ -473,19 +491,26 @@ public class MainActivity extends Activity {
                         DEFAULT_ALIAS
                 );
 
+        int mainState =
+                mode == TILE_DEFAULT
+                        ? PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+                        : PackageManager.COMPONENT_ENABLED_STATE_DISABLED;
+
         int vectorState =
                 mode == TILE_VECTOR
-                        ? PackageManager
-                        .COMPONENT_ENABLED_STATE_ENABLED
-                        : PackageManager
-                        .COMPONENT_ENABLED_STATE_DISABLED;
+                        ? PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+                        : PackageManager.COMPONENT_ENABLED_STATE_DISABLED;
 
         int defaultState =
                 mode == TILE_LSPOSED
-                        ? PackageManager
-                        .COMPONENT_ENABLED_STATE_ENABLED
-                        : PackageManager
-                        .COMPONENT_ENABLED_STATE_DISABLED;
+                        ? PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+                        : PackageManager.COMPONENT_ENABLED_STATE_DISABLED;
+
+        pm.setComponentEnabledSetting(
+                mainActivity,
+                mainState,
+                PackageManager.DONT_KILL_APP
+        );
 
         pm.setComponentEnabledSetting(
                 vectorAlias,
