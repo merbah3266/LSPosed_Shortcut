@@ -54,6 +54,13 @@
 
         </activity-alias>
 
+        <activity-alias
+            android:name=".TileLaunchAlias"
+            android:enabled="true"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:targetActivity=".MainActivity" />
+
         <service
             android:name=".StartTileService"
             android:label="LSPosed Shortcut"
