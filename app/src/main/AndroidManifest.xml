@@ -26,7 +26,8 @@
             android:enabled="false"
             android:exported="true"
             android:excludeFromRecents="true"
-            android:icon="@drawable/ic_launcher_lsp"             android:roundIcon="@drawable/ic_launch_lsp_round"
+            android:icon="@drawable/ic_launcher_lsp"
+            android:roundIcon="@drawable/ic_launch_lsp_round"
             android:label="LSPosed"
             android:targetActivity=".MainActivity">
 
