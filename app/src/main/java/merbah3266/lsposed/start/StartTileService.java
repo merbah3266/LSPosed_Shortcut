@@ -12,32 +12,29 @@ import android.service.quicksettings.TileService;
 
 public class StartTileService extends TileService {
 
+    private static final int LAUNCH_REQUEST_CODE = 1000;
+
     @Override
     public void onStartListening() {
         super.onStartListening();
-
-        Tile tile = getQsTile();
-
-        if (tile == null) {
-            return;
-        }
-
         updateTile(MainActivity.getTileMode(this));
 
-        Intent intent = new Intent(this, MainActivity.class);
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-
-        PendingIntent pendingIntent = PendingIntent.getActivity(
-                this,
-                0,
-                intent,
-                PendingIntent.FLAG_UPDATE_CURRENT |
-                PendingIntent.FLAG_IMMUTABLE
-        );
-
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            tile.setActivityLaunchForClick(pendingIntent);
-            tile.updateTile();
+            Intent intent = new Intent(this, MainActivity.class);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+
+            PendingIntent pendingIntent = PendingIntent.getActivity(
+                    this,
+                    LAUNCH_REQUEST_CODE,
+                    intent,
+                    PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+            );
+
+            Tile tile = getQsTile();
+            if (tile != null) {
+                tile.setActivityLaunchForClick(pendingIntent);
+                tile.updateTile();
+            }
         }
     }
 
@@ -47,14 +44,13 @@ public class StartTileService extends TileService {
 
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             Intent intent = new Intent(this, MainActivity.class);
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
 
             PendingIntent pendingIntent = PendingIntent.getActivity(
                     this,
-                    0,
+                    LAUNCH_REQUEST_CODE,
                     intent,
-                    PendingIntent.FLAG_UPDATE_CURRENT |
-                    PendingIntent.FLAG_IMMUTABLE
+                    PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
             );
 
             startActivityAndCollapse(pendingIntent);
