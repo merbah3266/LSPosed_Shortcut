@@ -22,6 +22,7 @@ public class MainActivity extends Activity {
     private static final String VECTOR_MODULE = "/data/adb/modules/zygisk_vector";
     private static final String LSPOSED_MODULE = "/data/adb/modules/zygisk_lsposed";
 
+    private static final String MAIN_ACTIVITY = "merbah3266.lsposed.start.MainActivity";
     private static final String VECTOR_ALIAS = "merbah3266.lsposed.start.VectorAlias";
     private static final String DEFAULT_ALIAS = "merbah3266.lsposed.start.DefaultAlias";
 
@@ -238,12 +239,15 @@ public class MainActivity extends Activity {
 
     private void updateLauncherIdentity(int mode) {
         PackageManager pm = getPackageManager();
+        ComponentName mainActivity = new ComponentName(this, MAIN_ACTIVITY);
         ComponentName vectorAlias = new ComponentName(this, VECTOR_ALIAS);
         ComponentName defaultAlias = new ComponentName(this, DEFAULT_ALIAS);
 
+        int mainState = (mode == TILE_DEFAULT) ? PackageManager.COMPONENT_ENABLED_STATE_ENABLED : PackageManager.COMPONENT_ENABLED_STATE_DISABLED;
         int vectorState = (mode == TILE_VECTOR) ? PackageManager.COMPONENT_ENABLED_STATE_ENABLED : PackageManager.COMPONENT_ENABLED_STATE_DISABLED;
         int defaultState = (mode == TILE_LSPOSED) ? PackageManager.COMPONENT_ENABLED_STATE_ENABLED : PackageManager.COMPONENT_ENABLED_STATE_DISABLED;
 
+        pm.setComponentEnabledSetting(mainActivity, mainState, PackageManager.DONT_KILL_APP);
         pm.setComponentEnabledSetting(vectorAlias, vectorState, PackageManager.DONT_KILL_APP);
         pm.setComponentEnabledSetting(defaultAlias, defaultState, PackageManager.DONT_KILL_APP);
     }
