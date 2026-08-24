@@ -17,12 +17,58 @@ public class StartTileService extends TileService {
     private static final int LAUNCH_REQUEST_CODE = 1000;
 
     @Override
+    public void onCreate() {
+        super.onCreate();
+
+        Log.d(TAG, "onCreate CALLED");
+    }
+
+    @Override
     public void onStartListening() {
         super.onStartListening();
 
         Log.d(TAG, "onStartListening CALLED");
 
         updateTile(MainActivity.getTileMode(this));
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            setupActivityLaunchForClick();
+        }
+    }
+
+    private void setupActivityLaunchForClick() {
+        Tile tile = getQsTile();
+
+        if (tile == null) {
+            Log.w(TAG, "getQsTile() returned null");
+            return;
+        }
+
+        try {
+            Intent intent = new Intent(this, MainActivity.class);
+
+            intent.addFlags(
+                    Intent.FLAG_ACTIVITY_NEW_TASK
+                            | Intent.FLAG_ACTIVITY_CLEAR_TOP
+                            | Intent.FLAG_ACTIVITY_SINGLE_TOP
+            );
+
+            PendingIntent pendingIntent = PendingIntent.getActivity(
+                    this,
+                    LAUNCH_REQUEST_CODE,
+                    intent,
+                    PendingIntent.FLAG_UPDATE_CURRENT
+                            | PendingIntent.FLAG_IMMUTABLE
+            );
+
+            tile.setActivityLaunchForClick(pendingIntent);
+            tile.updateTile();
+
+            Log.d(TAG, "Activity launch configured");
+
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to configure activity launch", e);
+        }
     }
 
     @Override
@@ -31,36 +77,32 @@ public class StartTileService extends TileService {
 
         Log.d(TAG, "onClick CALLED");
 
-        Intent intent = new Intent(this, MainActivity.class);
-        intent.addFlags(
-                Intent.FLAG_ACTIVITY_NEW_TASK
-                        | Intent.FLAG_ACTIVITY_CLEAR_TOP
-                        | Intent.FLAG_ACTIVITY_SINGLE_TOP
-        );
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            Log.d(TAG, "Activity launch handled by Tile");
+            return;
+        }
 
-        PendingIntent pendingIntent = PendingIntent.getActivity(
-                this,
-                LAUNCH_REQUEST_CODE,
-                intent,
-                PendingIntent.FLAG_UPDATE_CURRENT
-                        | PendingIntent.FLAG_IMMUTABLE
-        );
+        launchActivityLegacy();
+    }
 
+    private void launchActivityLegacy() {
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                Log.d(TAG, "Launching MainActivity using PendingIntent");
+            Intent intent = new Intent(this, MainActivity.class);
 
-                startActivityAndCollapse(pendingIntent);
-            } else {
-                Log.d(TAG, "Launching MainActivity using Intent");
+            intent.addFlags(
+                    Intent.FLAG_ACTIVITY_NEW_TASK
+                            | Intent.FLAG_ACTIVITY_CLEAR_TOP
+                            | Intent.FLAG_ACTIVITY_SINGLE_TOP
+            );
 
-                startActivityAndCollapse(intent);
-            }
+            Log.d(TAG, "Launching activity using legacy method");
 
-            Log.d(TAG, "startActivityAndCollapse CALLED");
+            startActivityAndCollapse(intent);
+
+            Log.d(TAG, "Legacy activity launch requested");
 
         } catch (Exception e) {
-            Log.e(TAG, "Failed to launch MainActivity", e);
+            Log.e(TAG, "Legacy activity launch failed", e);
         }
     }
 
@@ -72,7 +114,7 @@ public class StartTileService extends TileService {
             return;
         }
 
-        Log.d(TAG, "updateTile mode=" + mode);
+        Log.d(TAG, "Updating tile, mode=" + mode);
 
         if (mode == MainActivity.TILE_VECTOR) {
 
@@ -105,7 +147,6 @@ public class StartTileService extends TileService {
             }
 
         } else {
-
             restoreManifestTile(tile);
         }
 
@@ -120,7 +161,10 @@ public class StartTileService extends TileService {
             PackageManager pm = getPackageManager();
 
             ComponentName componentName =
-                    new ComponentName(this, StartTileService.class);
+                    new ComponentName(
+                            this,
+                            StartTileService.class
+                    );
 
             ServiceInfo serviceInfo = pm.getServiceInfo(
                     componentName,
@@ -147,7 +191,7 @@ public class StartTileService extends TileService {
             }
 
         } catch (PackageManager.NameNotFoundException e) {
-            Log.e(TAG, "Failed to get StartTileService info", e);
+            Log.e(TAG, "Failed to get service info", e);
         }
     }
 
