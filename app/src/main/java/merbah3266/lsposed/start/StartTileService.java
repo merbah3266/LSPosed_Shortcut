@@ -15,11 +15,12 @@ public class StartTileService extends TileService {
 
     private static final String TAG = "LSPOSED_TILE";
     private static final int LAUNCH_REQUEST_CODE = 1000;
+    private static final String TILE_LAUNCH_ALIAS =
+            "merbah3266.lsposed.start.TileLaunchAlias";
 
     @Override
     public void onCreate() {
         super.onCreate();
-
         Log.d(TAG, "onCreate CALLED");
     }
 
@@ -45,7 +46,14 @@ public class StartTileService extends TileService {
         }
 
         try {
-            Intent intent = new Intent(this, MainActivity.class);
+            Intent intent = new Intent();
+
+            intent.setComponent(
+                    new ComponentName(
+                            this,
+                            TILE_LAUNCH_ALIAS
+                    )
+            );
 
             intent.addFlags(
                     Intent.FLAG_ACTIVITY_NEW_TASK
@@ -87,7 +95,14 @@ public class StartTileService extends TileService {
 
     private void launchActivityLegacy() {
         try {
-            Intent intent = new Intent(this, MainActivity.class);
+            Intent intent = new Intent();
+
+            intent.setComponent(
+                    new ComponentName(
+                            this,
+                            TILE_LAUNCH_ALIAS
+                    )
+            );
 
             intent.addFlags(
                     Intent.FLAG_ACTIVITY_NEW_TASK
