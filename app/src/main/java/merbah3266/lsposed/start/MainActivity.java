@@ -199,45 +199,32 @@ public class MainActivity extends Activity {
                 switch (result.result) {
                     case RESULT_VECTOR:
                         saveTileMode(this, TILE_VECTOR);
-                        updateLauncherIdentity(true);
+                        updateLauncherIdentity(TILE_VECTOR);
                         refreshQuickSettingsTile(this);
                         finish();
                         break;
 
                     case RESULT_LSPOSED:
                         saveTileMode(this, TILE_LSPOSED);
-                        updateLauncherIdentity(false);
+                        updateLauncherIdentity(TILE_LSPOSED);
                         refreshQuickSettingsTile(this);
-                        finish();
-                        break;
-
-                    case RESULT_DEFAULT:
-                        saveTileMode(this, TILE_DEFAULT);
-                        updateLauncherIdentity(false);
-                        refreshQuickSettingsTile(this);
-                        finish();
-                        break;
-
-                    case RESULT_ROOT_FAILED:
-                        saveTileMode(this, TILE_DEFAULT);
-                        updateLauncherIdentity(false);
-                        refreshQuickSettingsTile(this);
-                        showError("Root permission failed or denied");
-                        finish();
-                        break;
-
-                    case RESULT_BROADCAST_FAILED:
-                        showError("Broadcast failed during: " + readableStage);
-                        finish();
-                        break;
-
-                    case RESULT_TIMEOUT:
-                        showError("Timeout during: " + readableStage);
                         finish();
                         break;
 
                     default:
-                        showError("Unknown error during: " + readableStage);
+                        saveTileMode(this, TILE_DEFAULT);
+                        updateLauncherIdentity(TILE_DEFAULT);
+                        refreshQuickSettingsTile(this);
+                        
+                        if (result.result == RESULT_ROOT_FAILED) {
+                            showError("Root permission failed or denied");
+                        } else if (result.result == RESULT_BROADCAST_FAILED) {
+                            showError("Broadcast failed during: " + readableStage);
+                        } else if (result.result == RESULT_TIMEOUT) {
+                            showError("Timeout during: " + readableStage);
+                        } else if (result.result != RESULT_DEFAULT) {
+                            showError("Unknown error during: " + readableStage);
+                        }
                         finish();
                         break;
                 }
@@ -249,16 +236,16 @@ public class MainActivity extends Activity {
         Toast.makeText(this, message, Toast.LENGTH_LONG).show();
     }
 
-    private void updateLauncherIdentity(boolean vectorActive) {
+    private void updateLauncherIdentity(int mode) {
         PackageManager pm = getPackageManager();
         ComponentName vectorAlias = new ComponentName(this, VECTOR_ALIAS);
         ComponentName defaultAlias = new ComponentName(this, DEFAULT_ALIAS);
 
-        int newStateVector = vectorActive ? PackageManager.COMPONENT_ENABLED_STATE_ENABLED : PackageManager.COMPONENT_ENABLED_STATE_DISABLED;
-        int newStateDefault = vectorActive ? PackageManager.COMPONENT_ENABLED_STATE_DISABLED : PackageManager.COMPONENT_ENABLED_STATE_ENABLED;
+        int vectorState = (mode == TILE_VECTOR) ? PackageManager.COMPONENT_ENABLED_STATE_ENABLED : PackageManager.COMPONENT_ENABLED_STATE_DISABLED;
+        int defaultState = (mode == TILE_LSPOSED) ? PackageManager.COMPONENT_ENABLED_STATE_ENABLED : PackageManager.COMPONENT_ENABLED_STATE_DISABLED;
 
-        pm.setComponentEnabledSetting(vectorAlias, newStateVector, PackageManager.DONT_KILL_APP);
-        pm.setComponentEnabledSetting(defaultAlias, newStateDefault, PackageManager.DONT_KILL_APP);
+        pm.setComponentEnabledSetting(vectorAlias, vectorState, PackageManager.DONT_KILL_APP);
+        pm.setComponentEnabledSetting(defaultAlias, defaultState, PackageManager.DONT_KILL_APP);
     }
 
     @Override
