@@ -46,15 +46,12 @@ public class StartTileService extends TileService {
             Intent intent = new Intent(this, MainActivity.class);
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
 
-            PendingIntent pendingIntent = PendingIntent.getActivity(
-                    this,
-                    LAUNCH_REQUEST_CODE,
-                    intent,
-                    PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
-            );
-
-            startActivityAndCollapse(pendingIntent);
+            // ملاحظة: قبل API 34 نستخدم overload الـ Intent مباشرة،
+            // لأن overload الـ PendingIntent غير متوفر إلا من API 34 فما فوق.
+            startActivityAndCollapse(intent);
         }
+        // من API 34 فما فوق، الضغط يُعالج تلقائياً عبر setActivityLaunchForClick
+        // في onStartListening، فلا حاجة لأي كود هنا.
     }
 
     private void updateTile(int mode) {
