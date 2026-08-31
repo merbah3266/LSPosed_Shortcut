@@ -61,6 +61,18 @@
             android:excludeFromRecents="true"
             android:targetActivity=".MainActivity" />
 
+        <activity
+            android:name=".TilePreferencesActivity"
+            android:theme="@android:style/Theme.DeviceDefault.Dialog.Alert"
+            android:excludeFromRecents="true"
+            android:exported="true">
+
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE_PREFERENCES" />
+            </intent-filter>
+
+        </activity>
+
         <service
             android:name=".StartTileService"
             android:label="LSPosed Shortcut"
