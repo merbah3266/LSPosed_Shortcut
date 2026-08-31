@@ -31,8 +31,8 @@ public class MainActivity extends Activity {
     private static final String VECTOR_ALIAS =
             "merbah3266.lsposed.start.VectorAlias";
 
-    private static final String DEFAULT_ALIAS =
-            "merbah3266.lsposed.start.DefaultAlias";
+    private static final String LSPOSED_ALIAS =
+            "merbah3266.lsposed.start.LsposedAlias";
 
     private static final String VECTOR_SECRET_CODE = "832867";
     private static final String LSPOSED_SECRET_CODE = "5776733";
@@ -485,10 +485,10 @@ public class MainActivity extends Activity {
                         VECTOR_ALIAS
                 );
 
-        ComponentName defaultAlias =
+        ComponentName lsposedAlias =
                 new ComponentName(
                         this,
-                        DEFAULT_ALIAS
+                        LSPOSED_ALIAS
                 );
 
         int mainState =
@@ -501,7 +501,7 @@ public class MainActivity extends Activity {
                         ? PackageManager.COMPONENT_ENABLED_STATE_ENABLED
                         : PackageManager.COMPONENT_ENABLED_STATE_DISABLED;
 
-        int defaultState =
+        int lsposedState =
                 mode == TILE_LSPOSED
                         ? PackageManager.COMPONENT_ENABLED_STATE_ENABLED
                         : PackageManager.COMPONENT_ENABLED_STATE_DISABLED;
@@ -519,8 +519,8 @@ public class MainActivity extends Activity {
         );
 
         pm.setComponentEnabledSetting(
-                defaultAlias,
-                defaultState,
+                lsposedAlias,
+                lsposedState,
                 PackageManager.DONT_KILL_APP
         );
     }
