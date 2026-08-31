@@ -22,7 +22,7 @@
         </activity>
 
         <activity-alias
-            android:name=".DefaultAlias"
+            android:name=".LsposedAlias"
             android:enabled="false"
             android:exported="true"
             android:excludeFromRecents="true"
