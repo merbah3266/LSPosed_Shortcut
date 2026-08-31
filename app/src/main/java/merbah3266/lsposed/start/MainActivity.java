@@ -3,6 +3,7 @@ package merbah3266.lsposed.start;
 import android.app.Activity;
 import android.content.ComponentName;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
@@ -37,8 +38,9 @@ public class MainActivity extends Activity {
     private static final String VECTOR_SECRET_CODE = "832867";
     private static final String LSPOSED_SECRET_CODE = "5776733";
 
-    private static final String PREFS_NAME = "qstile";
-    private static final String KEY_TILE_MODE = "tile_mode";
+    public static final String PREFS_NAME = "qstile";
+    public static final String KEY_TILE_MODE = "tile_mode";
+    public static final String KEY_HIDE_LAUNCHER_ICON = "hide_launcher_icon";
 
     public static final int TILE_DEFAULT = 0;
     public static final int TILE_VECTOR = 1;
@@ -379,6 +381,7 @@ public class MainActivity extends Activity {
                         );
 
                         updateLauncherIdentity(
+                                this,
                                 TILE_VECTOR
                         );
 
@@ -395,6 +398,7 @@ public class MainActivity extends Activity {
                         );
 
                         updateLauncherIdentity(
+                                this,
                                 TILE_LSPOSED
                         );
 
@@ -411,6 +415,7 @@ public class MainActivity extends Activity {
                         );
 
                         updateLauncherIdentity(
+                                this,
                                 TILE_DEFAULT
                         );
 
@@ -469,60 +474,79 @@ public class MainActivity extends Activity {
         ).show();
     }
 
-    private void updateLauncherIdentity(int mode) {
+    public static void updateLauncherIdentity(Context context, int mode) {
 
-        PackageManager pm = getPackageManager();
+        PackageManager pm = context.getPackageManager();
+
+        SharedPreferences prefs =
+                context.getSharedPreferences(
+                        PREFS_NAME,
+                        Context.MODE_PRIVATE
+                );
+
+        boolean hidden =
+                prefs.getBoolean(
+                        KEY_HIDE_LAUNCHER_ICON,
+                        false
+                );
 
         ComponentName mainActivity =
                 new ComponentName(
-                        this,
+                        context,
                         MAIN_ACTIVITY
                 );
 
         ComponentName vectorAlias =
                 new ComponentName(
-                        this,
+                        context,
                         VECTOR_ALIAS
                 );
 
         ComponentName lsposedAlias =
                 new ComponentName(
-                        this,
+                        context,
                         LSPOSED_ALIAS
                 );
 
-        int mainState =
-                mode == TILE_DEFAULT
-                        ? PackageManager.COMPONENT_ENABLED_STATE_ENABLED
-                        : PackageManager.COMPONENT_ENABLED_STATE_DISABLED;
-
-        int vectorState =
-                mode == TILE_VECTOR
-                        ? PackageManager.COMPONENT_ENABLED_STATE_ENABLED
-                        : PackageManager.COMPONENT_ENABLED_STATE_DISABLED;
-
-        int lsposedState =
-                mode == TILE_LSPOSED
-                        ? PackageManager.COMPONENT_ENABLED_STATE_ENABLED
-                        : PackageManager.COMPONENT_ENABLED_STATE_DISABLED;
-
-        pm.setComponentEnabledSetting(
+        ComponentName[] allComponents = {
                 mainActivity,
-                mainState,
-                PackageManager.DONT_KILL_APP
-        );
-
-        pm.setComponentEnabledSetting(
                 vectorAlias,
-                vectorState,
+                lsposedAlias
+        };
+
+        if (hidden) {
+
+            for (ComponentName component : allComponents) {
+                pm.setComponentEnabledSetting(
+                        component,
+                        PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+                        PackageManager.DONT_KILL_APP
+                );
+            }
+
+            return;
+        }
+
+        ComponentName target =
+                mode == TILE_VECTOR ? vectorAlias :
+                mode == TILE_LSPOSED ? lsposedAlias :
+                mainActivity;
+
+        pm.setComponentEnabledSetting(
+                target,
+                PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
                 PackageManager.DONT_KILL_APP
         );
 
-        pm.setComponentEnabledSetting(
-                lsposedAlias,
-                lsposedState,
-                PackageManager.DONT_KILL_APP
-        );
+        for (ComponentName component : allComponents) {
+            if (!component.equals(target)) {
+                pm.setComponentEnabledSetting(
+                        component,
+                        PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+                        PackageManager.DONT_KILL_APP
+                );
+            }
+        }
     }
 
     @Override
