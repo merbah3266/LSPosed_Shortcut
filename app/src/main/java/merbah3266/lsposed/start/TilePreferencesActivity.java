@@ -3,19 +3,20 @@ package merbah3266.lsposed.start;
 import android.app.Activity;
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.content.res.ColorStateList;
 import android.content.res.Configuration;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.view.Gravity;
-import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.Switch;
 import android.widget.TextView;
+import android.widget.Toast;
 
 public class TilePreferencesActivity extends Activity {
 
@@ -26,10 +27,13 @@ public class TilePreferencesActivity extends Activity {
     private int primaryTextColor;
     private int secondaryTextColor;
     private int accentColor;
-    private int dividerColor;
+    private int switchOffColor;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+
+        requestWindowFeature(Window.FEATURE_NO_TITLE);
+
         super.onCreate(savedInstanceState);
 
         boolean darkMode =
@@ -39,18 +43,18 @@ public class TilePreferencesActivity extends Activity {
 
         if (darkMode) {
             popupColor = Color.rgb(30, 30, 30);
-            settingColor = Color.rgb(43, 43, 43);
+            settingColor = Color.rgb(45, 45, 45);
             primaryTextColor = Color.rgb(245, 245, 245);
             secondaryTextColor = Color.rgb(185, 185, 185);
             accentColor = Color.rgb(180, 205, 255);
-            dividerColor = Color.rgb(65, 65, 65);
+            switchOffColor = Color.rgb(100, 100, 100);
         } else {
             popupColor = Color.rgb(255, 255, 255);
-            settingColor = Color.rgb(246, 246, 246);
+            settingColor = Color.rgb(245, 245, 245);
             primaryTextColor = Color.rgb(30, 30, 30);
             secondaryTextColor = Color.rgb(95, 95, 95);
-            accentColor = Color.rgb(40, 85, 165);
-            dividerColor = Color.rgb(225, 225, 225);
+            accentColor = Color.rgb(45, 90, 170);
+            switchOffColor = Color.rgb(125, 125, 125);
         }
 
         Window window = getWindow();
@@ -67,7 +71,6 @@ public class TilePreferencesActivity extends Activity {
                 window.getAttributes();
 
         params.dimAmount = 0.55f;
-
         window.setAttributes(params);
 
         SharedPreferences prefs =
@@ -102,7 +105,7 @@ public class TilePreferencesActivity extends Activity {
                 dp(24),
                 dp(22),
                 dp(24),
-                dp(16)
+                dp(14)
         );
 
         root.setBackground(
@@ -113,7 +116,7 @@ public class TilePreferencesActivity extends Activity {
         );
 
         TextView title = new TextView(this);
-        title.setText("Launcher Icon");
+        title.setText("Launcher icon");
         title.setTextSize(22);
         title.setTypeface(
                 Typeface.DEFAULT,
@@ -131,19 +134,15 @@ public class TilePreferencesActivity extends Activity {
 
         TextView subtitle = new TextView(this);
         subtitle.setText(
-                "Choose whether the app icon appears in your launcher."
+                "Choose whether the app icon is visible."
         );
         subtitle.setTextSize(14);
         subtitle.setTextColor(secondaryTextColor);
-        subtitle.setLineSpacing(
-                dp(2),
-                1.0f
-        );
         subtitle.setPadding(
                 0,
-                dp(7),
+                dp(6),
                 0,
-                dp(20)
+                dp(18)
         );
 
         root.addView(
@@ -163,9 +162,9 @@ public class TilePreferencesActivity extends Activity {
         );
         settingRow.setPadding(
                 dp(16),
-                dp(14),
+                dp(12),
                 dp(10),
-                dp(14)
+                dp(12)
         );
 
         settingRow.setBackground(
@@ -175,68 +174,42 @@ public class TilePreferencesActivity extends Activity {
                 )
         );
 
-        LinearLayout textContainer = new LinearLayout(this);
-        textContainer.setOrientation(
-                LinearLayout.VERTICAL
-        );
-
         TextView settingTitle = new TextView(this);
-        settingTitle.setText(
-                "Hide launcher icon"
-        );
+        settingTitle.setText("Hide icon");
         settingTitle.setTextSize(16);
-        settingTitle.setTypeface(
-                Typeface.DEFAULT,
-                Typeface.BOLD
-        );
-        settingTitle.setTextColor(
-                primaryTextColor
-        );
+        settingTitle.setTextColor(primaryTextColor);
 
-        TextView settingSubtitle = new TextView(this);
-        settingSubtitle.setText(
-                "Remove the icon from the app launcher."
-        );
-        settingSubtitle.setTextSize(13);
-        settingSubtitle.setTextColor(
-                secondaryTextColor
-        );
-        settingSubtitle.setPadding(
-                0,
-                dp(4),
-                0,
-                0
-        );
-
-        textContainer.addView(settingTitle);
-        textContainer.addView(settingSubtitle);
-
-        LinearLayout.LayoutParams textParams =
+        LinearLayout.LayoutParams titleParams =
                 new LinearLayout.LayoutParams(
                         0,
                         LinearLayout.LayoutParams.WRAP_CONTENT,
                         1f
                 );
 
-        textParams.setMargins(
-                0,
-                0,
-                dp(8),
-                0
-        );
-
         settingRow.addView(
-                textContainer,
-                textParams
+                settingTitle,
+                titleParams
         );
 
         hideIconSwitch = new Switch(this);
-        hideIconSwitch.setChecked(
-                currentlyHidden
-        );
+        hideIconSwitch.setChecked(currentlyHidden);
         hideIconSwitch.setContentDescription(
                 "Hide launcher icon"
         );
+
+        hideIconSwitch.setButtonTintList(
+                createSwitchTintList()
+        );
+
+        if (android.os.Build.VERSION.SDK_INT >= 21) {
+            hideIconSwitch.setThumbTintList(
+                    createSwitchThumbTintList()
+            );
+
+            hideIconSwitch.setTrackTintList(
+                    createSwitchTrackTintList()
+            );
+        }
 
         settingRow.addView(
                 hideIconSwitch,
@@ -252,30 +225,6 @@ public class TilePreferencesActivity extends Activity {
                         LinearLayout.LayoutParams.MATCH_PARENT,
                         LinearLayout.LayoutParams.WRAP_CONTENT
                 )
-        );
-
-        View divider = new View(this);
-
-        divider.setBackgroundColor(
-                dividerColor
-        );
-
-        LinearLayout.LayoutParams dividerParams =
-                new LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT,
-                        dp(1)
-                );
-
-        dividerParams.setMargins(
-                0,
-                dp(20),
-                0,
-                0
-        );
-
-        root.addView(
-                divider,
-                dividerParams
         );
 
         LinearLayout buttonRow = new LinearLayout(this);
@@ -346,6 +295,56 @@ public class TilePreferencesActivity extends Activity {
         return root;
     }
 
+    private ColorStateList createSwitchTintList() {
+
+        return new ColorStateList(
+                new int[][] {
+                        new int[] { android.R.attr.state_checked },
+                        new int[] {}
+                },
+                new int[] {
+                        accentColor,
+                        switchOffColor
+                }
+        );
+    }
+
+    private ColorStateList createSwitchThumbTintList() {
+
+        return new ColorStateList(
+                new int[][] {
+                        new int[] { android.R.attr.state_checked },
+                        new int[] {}
+                },
+                new int[] {
+                        accentColor,
+                        Color.rgb(235, 235, 235)
+                }
+        );
+    }
+
+    private ColorStateList createSwitchTrackTintList() {
+
+        int checkedTrackColor;
+
+        if (accentColor == Color.rgb(180, 205, 255)) {
+            checkedTrackColor = Color.rgb(95, 120, 170);
+        } else {
+            checkedTrackColor = Color.rgb(145, 170, 220);
+        }
+
+        return new ColorStateList(
+                new int[][] {
+                        new int[] { android.R.attr.state_checked },
+                        new int[] {}
+                },
+                new int[] {
+                        checkedTrackColor,
+                        switchOffColor
+                }
+        );
+    }
+
     private Button createButton(String text) {
 
         Button button = new Button(this);
@@ -364,14 +363,13 @@ public class TilePreferencesActivity extends Activity {
         button.setGravity(
                 Gravity.CENTER
         );
+        button.setBackgroundColor(
+                Color.TRANSPARENT
+        );
 
         if (android.os.Build.VERSION.SDK_INT >= 21) {
             button.setStateListAnimator(null);
         }
-
-        button.setBackgroundColor(
-                Color.TRANSPARENT
-        );
 
         return button;
     }
@@ -418,6 +416,12 @@ public class TilePreferencesActivity extends Activity {
                 this,
                 mode
         );
+
+        Toast.makeText(
+                this,
+                "Changes saved",
+                Toast.LENGTH_SHORT
+        ).show();
 
         finish();
     }
