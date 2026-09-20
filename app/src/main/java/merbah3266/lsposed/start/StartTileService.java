@@ -30,11 +30,11 @@ public class StartTileService extends TileService {
 
         Log.d(TAG, "onStartListening CALLED");
 
-        updateTile(MainActivity.getTileMode(this));
-
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             setupActivityLaunchForClick();
         }
+
+        updateTile(MainActivity.getTileMode(this));
     }
 
     private void setupActivityLaunchForClick() {
@@ -70,7 +70,6 @@ public class StartTileService extends TileService {
             );
 
             tile.setActivityLaunchForClick(pendingIntent);
-            tile.updateTile();
 
             Log.d(TAG, "Activity launch configured");
 
@@ -213,14 +212,6 @@ public class StartTileService extends TileService {
     @Override
     public void onStopListening() {
         Log.d(TAG, "onStopListening CALLED");
-
-        Tile tile = getQsTile();
-
-        if (tile != null) {
-            tile.setState(Tile.STATE_INACTIVE);
-            tile.updateTile();
-        }
-
         super.onStopListening();
     }
 }
