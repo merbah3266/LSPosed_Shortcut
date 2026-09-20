@@ -2,6 +2,7 @@ package merbah3266.lsposed.start;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.ColorStateList;
 import android.content.res.Configuration;
@@ -15,12 +16,15 @@ import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.RippleDrawable;
+import android.net.Uri;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.view.Gravity;
 import android.view.Window;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.LinearLayout;
+import android.widget.Space;
 import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -270,13 +274,43 @@ public class TilePreferencesActivity extends Activity {
                 LinearLayout.HORIZONTAL
         );
         buttonRow.setGravity(
-                Gravity.END | Gravity.CENTER_VERTICAL
+                Gravity.CENTER_VERTICAL
         );
         buttonRow.setPadding(
                 0,
                 dp(8),
                 0,
                 0
+        );
+
+        Button appInfoButton =
+                createButton("App info");
+
+        appInfoButton.setTextColor(
+                secondaryTextColor
+        );
+
+        appInfoButton.setOnClickListener(
+                v -> openAppInfo()
+        );
+
+        buttonRow.addView(
+                appInfoButton,
+                new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        dp(40)
+                )
+        );
+
+        Space spacer = new Space(this);
+
+        buttonRow.addView(
+                spacer,
+                new LinearLayout.LayoutParams(
+                        0,
+                        1,
+                        1f
+                )
         );
 
         Button cancelButton =
@@ -288,6 +322,17 @@ public class TilePreferencesActivity extends Activity {
 
         cancelButton.setOnClickListener(
                 v -> finish()
+        );
+
+        LinearLayout.LayoutParams cancelParams =
+                new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        dp(40)
+                );
+
+        buttonRow.addView(
+                cancelButton,
+                cancelParams
         );
 
         Button saveButton =
@@ -311,17 +356,6 @@ public class TilePreferencesActivity extends Activity {
         saveButton.setEnabled(false);
         saveButton.setAlpha(0.4f);
 
-        LinearLayout.LayoutParams cancelParams =
-                new LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.WRAP_CONTENT,
-                        dp(40)
-                );
-
-        buttonRow.addView(
-                cancelButton,
-                cancelParams
-        );
-
         LinearLayout.LayoutParams saveParams =
                 new LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.WRAP_CONTENT,
@@ -344,6 +378,21 @@ public class TilePreferencesActivity extends Activity {
         );
 
         return root;
+    }
+
+    private void openAppInfo() {
+
+        Intent intent = new Intent(
+                Settings.ACTION_APPLICATION_DETAILS_SETTINGS
+        );
+
+        intent.setData(
+                Uri.parse(
+                        "package:" + getPackageName()
+                )
+        );
+
+        startActivity(intent);
     }
 
     private ColorStateList createSwitchTintList() {
