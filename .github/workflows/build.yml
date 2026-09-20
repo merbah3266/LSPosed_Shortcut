@@ -3,17 +3,23 @@ name: Manual Android Build & Sign
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   build_and_sign:
     name: Build APK & Sign
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
 
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v6
         with:
           java-version: '17'
           distribution: 'temurin'
@@ -21,8 +27,11 @@ jobs:
 
       - name: Set up Android SDK
         run: |
-          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses || true
-          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+
+          yes | "$SDKMANAGER" --licenses || true
+
+          "$SDKMANAGER" \
             "platforms;android-36" \
             "build-tools;36.0.0"
 
@@ -36,7 +45,10 @@ jobs:
         id: vars
         run: |
           VERSION_NAME=$(grep "versionName" app/build.gradle | head -n 1 | awk -F '["'\'']' '{print $2}')
-          echo "VERSION_NAME=${VERSION_NAME:-unknown}" >> "$GITHUB_ENV"
+          VERSION_NAME="${VERSION_NAME:-unknown}"
+
+          echo "VERSION_NAME=$VERSION_NAME" >> "$GITHUB_ENV"
+          echo "version_name=$VERSION_NAME" >> "$GITHUB_OUTPUT"
 
       - name: Sign Release APK
         env:
@@ -90,8 +102,8 @@ jobs:
           fi
 
       - name: Upload Final Bundle
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
-          name: lsposed_shortcut_v${{ env.VERSION_NAME }}_builds
+          name: lsposed_shortcut_v${{ steps.vars.outputs.version_name }}_builds
           path: final_apks/*.apk
           if-no-files-found: error
